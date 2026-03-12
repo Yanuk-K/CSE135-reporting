@@ -1,0 +1,311 @@
+openapi: 3.0.3
+info:
+  title: MiraMarket Reporting API
+  version: 1.1.0
+servers:
+  - url: https://reporting.miramarket.site
+paths:
+  /api/static:
+    get:
+      summary: Get all static pageview entries
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create static pageview entry
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaticInput"
+            example:
+              url: https://test.miramarket.site/
+              type: pageview
+              user_agent: Mozilla/5.0
+              language: en-US
+              screen_width: 1920
+              screen_height: 1080
+              session_id: 9f66dc7b-6f0f-4d9d-8c0d-1246f2b8023f
+              created_at: "2026-02-28T00:00:00Z"
+      responses:
+        "201":
+          description: Created
+  /api/static/useragents:
+    get:
+      summary: Get grouped static user agents
+      responses:
+        "200":
+          description: OK
+  /api/static/languages:
+    get:
+      summary: Get grouped static languages
+      responses:
+        "200":
+          description: OK
+  /api/static/screensizes:
+    get:
+      summary: Get grouped static screen sizes
+      responses:
+        "200":
+          description: OK
+  /api/static/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      summary: Get one static pageview entry by ID
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not found
+    put:
+      summary: Update one static pageview entry by ID
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaticInput"
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: Invalid ID
+        "404":
+          description: Not found
+    delete:
+      summary: Delete one static pageview entry by ID
+      responses:
+        "200":
+          description: Deleted
+        "400":
+          description: Invalid ID
+        "404":
+          description: Not found
+  /api/activity:
+    get:
+      summary: Get all activity entries
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create activity entry
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivityInput"
+            example:
+              session_id: 9f66dc7b-6f0f-4d9d-8c0d-1246f2b8023f
+              event_name: click
+              event_category: interaction
+              event_data:
+                target: button#signup
+              url: https://test.miramarket.site/
+              created_at: "2026-02-28T00:00:00Z"
+      responses:
+        "201":
+          description: Created
+  /api/activity/names:
+    get:
+      summary: Get grouped activity event names
+      responses:
+        "200":
+          description: OK
+  /api/activity/categories:
+    get:
+      summary: Get grouped activity categories
+      responses:
+        "200":
+          description: OK
+  /api/activity/urls:
+    get:
+      summary: Get grouped activity URLs
+      responses:
+        "200":
+          description: OK
+  /api/activity/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      summary: Get one activity entry by ID
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Not found
+    put:
+      summary: Update one activity entry by ID
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivityInput"
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: Invalid ID
+        "404":
+          description: Not found
+    delete:
+      summary: Delete one activity entry by ID
+      responses:
+        "200":
+          description: Deleted
+        "400":
+          description: Invalid ID
+        "404":
+          description: Not found
+  /api/performance:
+    get:
+      summary: Get performance percentile metrics
+      parameters:
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Authentication required
+  /api/errors:
+    get:
+      summary: Get errors time series and grouped top errors
+      parameters:
+        - $ref: "#/components/parameters/StartDate"
+        - $ref: "#/components/parameters/EndDate"
+        - $ref: "#/components/parameters/GroupBy"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Authentication required
+components:
+  parameters:
+    StartDate:
+      name: start
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+      description: Start date in YYYY-MM-DD
+    EndDate:
+      name: end
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: '^\\d{4}-\\d{2}-\\d{2}$'
+      description: End date in YYYY-MM-DD
+    GroupBy:
+      name: group
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [day, hour]
+      description: Group granularity
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  schemas:
+    StaticInput:
+      type: object
+      properties:
+        url:
+          type: string
+          nullable: true
+        type:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+        language:
+          type: string
+          nullable: true
+        screen_width:
+          type: integer
+          nullable: true
+        screen_height:
+          type: integer
+          nullable: true
+        referrer:
+          type: string
+          nullable: true
+        client_timestamp:
+          type: integer
+          nullable: true
+        server_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+        client_ip:
+          type: string
+          nullable: true
+        session_id:
+          type: string
+          nullable: true
+        payload:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    ActivityInput:
+      type: object
+      properties:
+        session_id:
+          type: string
+          nullable: true
+        event_name:
+          type: string
+          nullable: true
+        event_category:
+          type: string
+          nullable: true
+        event_data:
+          type: object
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        server_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
