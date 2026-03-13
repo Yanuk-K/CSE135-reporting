@@ -39,14 +39,14 @@ Dashboard.captureElementImage = async function (element, label) {
 
   const canvas = await window.html2canvas(element, {
     backgroundColor: "#ffffff",
-    scale: Math.min(window.devicePixelRatio || 1, 2),
+    scale: 1,
     useCORS: true,
     logging: false,
   });
 
   return {
     label,
-    data_url: canvas.toDataURL("image/png"),
+    data_url: canvas.toDataURL("image/jpeg", 0.72),
   };
 };
 
