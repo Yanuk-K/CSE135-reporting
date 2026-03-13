@@ -53,32 +53,11 @@ Dashboard.captureElementImage = async function (element, label) {
 Dashboard.collectExportScreenshots = async function (route) {
   const content = document.getElementById("content");
   if (!content) return [];
-
-  let elements;
-  if (route === "/overview") {
-    elements = [
-      document.getElementById("cards"),
-      document.getElementById("chart"),
-      document.getElementById("top-pages"),
-    ];
-  } else {
-    elements = Array.from(content.children);
-  }
-
-  const visibleElements = elements.filter(
-    (element) => element && element.getBoundingClientRect().width > 0 && element.getBoundingClientRect().height > 0
+  const screenshot = await Dashboard.captureElementImage(
+    content,
+    `${route.replace("/", "").toUpperCase() || "REPORT"} Dashboard`
   );
-
-  const screenshots = [];
-  for (const [index, element] of visibleElements.entries()) {
-    const screenshot = await Dashboard.captureElementImage(
-      element,
-      `${route.replace("/", "").toUpperCase() || "REPORT"} Section ${index + 1}`
-    );
-    if (screenshot) screenshots.push(screenshot);
-  }
-
-  return screenshots;
+  return screenshot ? [screenshot] : [];
 };
 
 Dashboard.exportCurrentReport = async function () {

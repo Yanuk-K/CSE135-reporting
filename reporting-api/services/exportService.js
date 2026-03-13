@@ -2,22 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const PDFDocument = require("pdfkit");
 
-const {
-  getErrorsReport,
-  getOverviewReport,
-  getPerformanceReport,
-} = require("./reportData");
-
 const exportsDir = path.join(__dirname, "..", "exports");
-
-function formatDate(value) {
-  return value == null ? "-" : new Date(value).toISOString().slice(0, 10);
-}
-
-function formatNumber(value, digits = 0, suffix = "") {
-  if (value == null) return "n/a";
-  return `${Number(value).toFixed(digits)}${suffix}`;
-}
 
 async function cleanupOldExports() {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
@@ -39,13 +24,6 @@ async function cleanupOldExports() {
   }
 }
 
-function writeRows(doc, rows) {
-  rows.forEach((row) => {
-    if (doc.y > 720) doc.addPage();
-    doc.font("Helvetica").fontSize(11).text(row);
-  });
-}
-
 function decodeDataUrl(dataUrl) {
   if (typeof dataUrl !== "string") return null;
   const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
@@ -53,101 +31,38 @@ function decodeDataUrl(dataUrl) {
   return Buffer.from(match[2], "base64");
 }
 
-function writeScreenshots(doc, screenshots) {
-  if (!Array.isArray(screenshots) || screenshots.length === 0) return;
+function renderScreenshotAcrossPages(doc, screenshot) {
+  const imageBuffer = decodeDataUrl(screenshot?.data_url);
+  if (!imageBuffer) return false;
 
-  screenshots.forEach((screenshot, index) => {
-    const imageBuffer = decodeDataUrl(screenshot.data_url);
-    if (!imageBuffer) return;
+  const image = doc.openImage(imageBuffer);
+  const left = doc.page.margins.left;
+  const top = doc.y;
+  const maxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const firstPageHeight = doc.page.height - top - doc.page.margins.bottom;
+  const fullPageTop = doc.page.margins.top;
+  const fullPageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
+  const scale = maxWidth / image.width;
+  const scaledHeight = image.height * scale;
 
-    if (index > 0 || doc.y > 140) doc.addPage();
-    doc.font("Helvetica-Bold").fontSize(13).text(screenshot.label || "Dashboard View");
-    doc.moveDown(0.4);
-    doc.image(imageBuffer, {
-      fit: [500, 640],
-      align: "center",
-      valign: "top",
-    });
-    doc.moveDown();
-  });
-}
+  let offset = 0;
+  let pageIndex = 0;
 
-function buildOverviewPdf(doc, start, end, data, screenshots) {
-  doc.font("Helvetica-Bold").fontSize(20).text("Overview Report");
-  doc.moveDown(0.3);
-  doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
-  doc.moveDown();
-  writeScreenshots(doc, screenshots);
-  if (screenshots.length) doc.addPage();
-  writeRows(doc, [
-    `Total Pageviews: ${data.summary.total_pageviews.toLocaleString()}`,
-    `Total Sessions: ${data.summary.total_sessions.toLocaleString()}`,
-    `Avg Load Time: ${formatNumber(data.summary.average_load_time, 2, " ms")}`,
-    `Total Errors: ${data.summary.total_errors.toLocaleString()}`,
-    "",
-    "Top Pages",
-    ...(data.top_pages.length
-      ? data.top_pages.map(
-          (row, index) =>
-            `${index + 1}. ${row.url || "/"} (${Number(row.views || 0).toLocaleString()} views)`
-        )
-      : ["No pageviews found in this range."]),
-    "",
-    "Pageviews by Day",
-    ...(data.timeseries.length
-      ? data.timeseries.map(
-          (row) => `${formatDate(row.date)}: ${Number(row.views || 0).toLocaleString()}`
-        )
-      : ["No pageview trend data found in this range."]),
-  ]);
-}
+  while (offset < scaledHeight) {
+    const currentTop = pageIndex === 0 ? top : fullPageTop;
+    const visibleHeight = pageIndex === 0 ? firstPageHeight : fullPageHeight;
 
-function buildPerformancePdf(doc, start, end, data, screenshots) {
-  doc.font("Helvetica-Bold").fontSize(20).text("Performance Report");
-  doc.moveDown(0.3);
-  doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
-  doc.moveDown();
-  writeScreenshots(doc, screenshots);
-  if (screenshots.length) doc.addPage();
-  writeRows(
-    doc,
-    Object.entries(data).flatMap(([metric, value]) => [
-      metric.toUpperCase(),
-      `  p50: ${metric === "cls" ? formatNumber(value.p50, 3) : formatNumber(value.p50, 2, " ms")}`,
-      `  p75: ${metric === "cls" ? formatNumber(value.p75, 3) : formatNumber(value.p75, 2, " ms")}`,
-      `  p95: ${metric === "cls" ? formatNumber(value.p95, 3) : formatNumber(value.p95, 2, " ms")}`,
-      "",
-    ])
-  );
-}
+    if (pageIndex > 0) doc.addPage();
+    doc.save();
+    doc.rect(left, currentTop, maxWidth, visibleHeight).clip();
+    doc.image(imageBuffer, left, currentTop - offset, { width: maxWidth });
+    doc.restore();
 
-function buildErrorsPdf(doc, start, end, data, screenshots) {
-  const totalErrors = data.timeseries.reduce((sum, row) => sum + Number(row.errors || 0), 0);
+    offset += visibleHeight;
+    pageIndex += 1;
+  }
 
-  doc.font("Helvetica-Bold").fontSize(20).text("Errors Report");
-  doc.moveDown(0.3);
-  doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
-  doc.moveDown();
-  writeScreenshots(doc, screenshots);
-  if (screenshots.length) doc.addPage();
-  writeRows(doc, [
-    `Total Errors: ${totalErrors.toLocaleString()}`,
-    "",
-    "Top Errors",
-    ...(data.top_errors.length
-      ? data.top_errors.map(
-          (row, index) =>
-            `${index + 1}. ${row.error_message} (${Number(row.hits || 0).toLocaleString()} hits)`
-        )
-      : ["No errors found in this range."]),
-    "",
-    "Errors by Day",
-    ...(data.timeseries.length
-      ? data.timeseries.map(
-          (row) => `${formatDate(row.date)}: ${Number(row.errors || 0).toLocaleString()}`
-        )
-      : ["No error trend data found in this range."]),
-  ]);
+  return true;
 }
 
 async function createExportPdf(route, start, end, screenshots = []) {
@@ -159,23 +74,15 @@ async function createExportPdf(route, start, end, screenshots = []) {
   const doc = new PDFDocument({ margin: 48, size: "LETTER" });
   const stream = fs.createWriteStream(filePath);
 
-  let data;
-  if (route === "/overview") {
-    data = await getOverviewReport(start, end);
-  } else if (route === "/performance") {
-    data = await getPerformanceReport(start, end);
-  } else {
-    const report = await getErrorsReport(start, end, "day", 10, 0);
-    data = report.data;
-  }
-
   doc.pipe(stream);
-  if (route === "/overview") {
-    buildOverviewPdf(doc, start, end, data, screenshots);
-  } else if (route === "/performance") {
-    buildPerformancePdf(doc, start, end, data, screenshots);
-  } else {
-    buildErrorsPdf(doc, start, end, data, screenshots);
+  doc.font("Helvetica-Bold").fontSize(20).text(`${reportName.toUpperCase()} Report`);
+  doc.moveDown(0.3);
+  doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
+  doc.moveDown();
+
+  const rendered = renderScreenshotAcrossPages(doc, screenshots[0]);
+  if (!rendered) {
+    doc.font("Helvetica").fontSize(11).text("No dashboard screenshot was available for this export.");
   }
   doc.end();
 
