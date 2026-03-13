@@ -46,11 +46,39 @@ function writeRows(doc, rows) {
   });
 }
 
-function buildOverviewPdf(doc, start, end, data) {
+function decodeDataUrl(dataUrl) {
+  if (typeof dataUrl !== "string") return null;
+  const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+  if (!match) return null;
+  return Buffer.from(match[2], "base64");
+}
+
+function writeChartImages(doc, chartImages) {
+  if (!Array.isArray(chartImages) || chartImages.length === 0) return;
+
+  chartImages.forEach((chart) => {
+    const imageBuffer = decodeDataUrl(chart.data_url);
+    if (!imageBuffer) return;
+
+    if (doc.y > 500) doc.addPage();
+    doc.moveDown();
+    doc.font("Helvetica-Bold").fontSize(13).text(chart.label || "Chart");
+    doc.moveDown(0.4);
+    doc.image(imageBuffer, {
+      fit: [500, 260],
+      align: "center",
+      valign: "center",
+    });
+    doc.moveDown();
+  });
+}
+
+function buildOverviewPdf(doc, start, end, data, chartImages) {
   doc.font("Helvetica-Bold").fontSize(20).text("Overview Report");
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
   doc.moveDown();
+  writeChartImages(doc, chartImages);
   writeRows(doc, [
     `Total Pageviews: ${data.summary.total_pageviews.toLocaleString()}`,
     `Total Sessions: ${data.summary.total_sessions.toLocaleString()}`,
@@ -74,11 +102,12 @@ function buildOverviewPdf(doc, start, end, data) {
   ]);
 }
 
-function buildPerformancePdf(doc, start, end, data) {
+function buildPerformancePdf(doc, start, end, data, chartImages) {
   doc.font("Helvetica-Bold").fontSize(20).text("Performance Report");
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
   doc.moveDown();
+  writeChartImages(doc, chartImages);
   writeRows(
     doc,
     Object.entries(data).flatMap(([metric, value]) => [
@@ -91,13 +120,14 @@ function buildPerformancePdf(doc, start, end, data) {
   );
 }
 
-function buildErrorsPdf(doc, start, end, data) {
+function buildErrorsPdf(doc, start, end, data, chartImages) {
   const totalErrors = data.timeseries.reduce((sum, row) => sum + Number(row.errors || 0), 0);
 
   doc.font("Helvetica-Bold").fontSize(20).text("Errors Report");
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
   doc.moveDown();
+  writeChartImages(doc, chartImages);
   writeRows(doc, [
     `Total Errors: ${totalErrors.toLocaleString()}`,
     "",
@@ -118,7 +148,7 @@ function buildErrorsPdf(doc, start, end, data) {
   ]);
 }
 
-async function createExportPdf(route, start, end) {
+async function createExportPdf(route, start, end, chartImages = []) {
   await cleanupOldExports();
 
   const reportName = route.replace("/", "") || "report";
@@ -139,11 +169,11 @@ async function createExportPdf(route, start, end) {
 
   doc.pipe(stream);
   if (route === "/overview") {
-    buildOverviewPdf(doc, start, end, data);
+    buildOverviewPdf(doc, start, end, data, chartImages);
   } else if (route === "/performance") {
-    buildPerformancePdf(doc, start, end, data);
+    buildPerformancePdf(doc, start, end, data, chartImages);
   } else {
-    buildErrorsPdf(doc, start, end, data);
+    buildErrorsPdf(doc, start, end, data, chartImages);
   }
   doc.end();
 

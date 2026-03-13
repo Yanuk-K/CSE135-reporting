@@ -34,6 +34,56 @@ Dashboard.canExport = function (route) {
   return route === "/overview" || route === "/performance" || route === "/errors";
 };
 
+Dashboard.getCanvasImage = function (id, label) {
+  const canvas = document.getElementById(id);
+  if (!canvas || !canvas.width || !canvas.height) return null;
+  return {
+    label,
+    data_url: canvas.toDataURL("image/png"),
+  };
+};
+
+Dashboard.getZingChartImage = function (id, label) {
+  if (!window.zingchart || !document.getElementById(id)) return null;
+
+  try {
+    const imageData = zingchart.exec(id, "getimagedata", {
+      download: false,
+      filetype: "png",
+    });
+    const dataUrl =
+      typeof imageData === "string"
+        ? imageData
+        : imageData?.data || imageData?.image || imageData?.imagedata || imageData?.dataurl;
+    if (!dataUrl) return null;
+    return {
+      label,
+      data_url: dataUrl,
+    };
+  } catch (_) {
+    return null;
+  }
+};
+
+Dashboard.collectExportCharts = function (route) {
+  const charts = [];
+
+  if (route === "/overview") {
+    const chart = Dashboard.getCanvasImage("chart", "Pageviews Trend");
+    if (chart) charts.push(chart);
+  }
+  if (route === "/performance") {
+    const chart = Dashboard.getCanvasImage("perf-chart", "Performance Metrics");
+    if (chart) charts.push(chart);
+  }
+  if (route === "/errors") {
+    const chart = Dashboard.getZingChartImage("errorTrendChart", "Errors Trend");
+    if (chart) charts.push(chart);
+  }
+
+  return charts;
+};
+
 Dashboard.exportCurrentReport = async function () {
   const button = document.getElementById("export-btn");
   const state = Dashboard.parseHash(window.location.hash || "#/overview");
@@ -49,6 +99,7 @@ Dashboard.exportCurrentReport = async function () {
         route: state.route,
         start: state.start,
         end: state.end,
+        chart_images: Dashboard.collectExportCharts(state.route),
       }),
     });
     if (!res) return;
