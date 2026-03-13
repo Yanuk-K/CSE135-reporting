@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>403 Forbidden</title>
+  <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+  <link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body>
+  <header class="dashboard-header">
+    <a href="/dashboard.html#/overview" class="brand">Analytics Dashboard</a>
+  </header>
+  <main class="dashboard-content">
+    <section class="panel">
+      <h1>403 Forbidden</h1>
+      <p>The server understood the request but will not allow this page to be viewed.</p>
+      <div class="error-box">
+        Requested path: <code id="path"></code>
+      </div>
+      <p><a href="/dashboard.html#/login">Sign In</a></p>
+      <p><a href="/dashboard.html#/overview">Go Home</a></p>
+    </section>
+  </main>
+  <footer class="dashboard-footer">
+    <small>CSE 135 Dashboard</small>
+  </footer>
+  <script>
+    document.getElementById("path").textContent = window.location.pathname;
+  </script>
+</body>
+</html>

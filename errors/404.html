@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 Not Found</title>
+  <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+  <link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body>
+  <header class="dashboard-header">
+    <a href="/dashboard.html#/overview" class="brand">Analytics Dashboard</a>
+  </header>
+  <main class="dashboard-content">
+    <section class="panel">
+      <h1>404 Not Found</h1>
+      <p>The page you requested does not exist at this address or may have been moved.</p>
+      <div class="error-box">
+        Requested path: <code id="path"></code>
+      </div>
+      <p><a href="/dashboard.html#/overview">Open Dashboard</a></p>
+    </section>
+  </main>
+  <footer class="dashboard-footer">
+    <small>CSE 135 Dashboard</small>
+  </footer>
+  <script>
+    document.getElementById("path").textContent = window.location.pathname;
+  </script>
+</body>
+</html>

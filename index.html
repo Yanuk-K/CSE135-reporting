@@ -2,11 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
   <title>Dashboard Redirect</title>
+  <link rel="stylesheet" href="dashboard.css" />
   <meta http-equiv="refresh" content="0; url=dashboard.html#/login" />
 </head>
 <body>
-  <p>Redirecting to dashboard...</p>
+  <header class="dashboard-header">
+    <a href="dashboard.html#/overview" class="brand">Analytics Dashboard</a>
+  </header>
+  <main class="dashboard-content">
+    <section class="panel">
+      <h1>Redirecting</h1>
+      <p>If the dashboard does not open automatically, use the link below.</p>
+      <p><a href="dashboard.html#/login">Open Dashboard</a></p>
+    </section>
+  </main>
+  <footer class="dashboard-footer">
+    <small>CSE 135 Dashboard</small>
+  </footer>
 </body>
 </html>
