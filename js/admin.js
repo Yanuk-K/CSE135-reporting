@@ -1,5 +1,16 @@
 window.Dashboard = window.Dashboard || {};
 
+Dashboard.roleOptions = [
+  { value: "viewer", label: "viewer" },
+  { value: "admin", label: "analyst" },
+  { value: "owner", label: "super admin" },
+];
+
+Dashboard.roleLabel = function (value) {
+  const match = Dashboard.roleOptions.find((option) => option.value === value);
+  return match ? match.label : value;
+};
+
 Dashboard.renderAdmin = async function () {
   const content = document.getElementById("content");
   Dashboard.showLoading(content);
@@ -16,9 +27,9 @@ Dashboard.renderAdmin = async function () {
           <input name="display_name" type="text" placeholder="Display Name" />
           <input name="password" type="password" placeholder="Password" required />
           <select name="role">
-            <option value="viewer">viewer</option>
-            <option value="admin">admin</option>
-            <option value="owner">owner</option>
+            ${Dashboard.roleOptions
+              .map((option) => `<option value="${option.value}">${option.label}</option>`)
+              .join("")}
           </select>
           <button type="submit">Add User</button>
         </form>
@@ -50,11 +61,11 @@ Dashboard.renderAdmin = async function () {
       nameTd.textContent = user.display_name || "";
       const roleTd = document.createElement("td");
       const roleSelect = document.createElement("select");
-      ["viewer", "admin", "owner"].forEach((role) => {
+      Dashboard.roleOptions.forEach((option) => {
         const opt = document.createElement("option");
-        opt.value = role;
-        opt.textContent = role;
-        if (user.role === role) opt.selected = true;
+        opt.value = option.value;
+        opt.textContent = option.label;
+        if (user.role === option.value) opt.selected = true;
         roleSelect.appendChild(opt);
       });
       roleTd.appendChild(roleSelect);
