@@ -18,13 +18,47 @@ Dashboard.setAuthUI = function (isAuthenticated) {
 
 Dashboard.setHeaderState = function (state, isAuthenticated) {
   const isLogin = state.route === "/login";
+  const canExport = isAuthenticated && Dashboard.canExport(state.route);
   document.getElementById("start-date").value = state.start;
   document.getElementById("end-date").value = state.end;
   document.getElementById("date-controls").classList.toggle("hidden", isLogin);
   document.getElementById("logout-btn").classList.toggle("hidden", !isAuthenticated);
   document.getElementById("user-label").textContent =
     isLogin ? "Guest" : (sessionStorage.getItem("display_name") || "User");
+  document.getElementById("export-btn").classList.toggle("hidden", !canExport);
+  document.getElementById("export-btn").disabled = !canExport;
   Dashboard.setActiveNav(state.route);
+};
+
+Dashboard.canExport = function (route) {
+  return route === "/overview" || route === "/performance" || route === "/errors";
+};
+
+Dashboard.exportCurrentReport = async function () {
+  const button = document.getElementById("export-btn");
+  const state = Dashboard.parseHash(window.location.hash || "#/overview");
+  if (!Dashboard.canExport(state.route)) return;
+
+  button.disabled = true;
+  button.textContent = "Exporting...";
+
+  try {
+    const res = await Dashboard.apiFetch("/api/exports/report", {
+      method: "POST",
+      body: JSON.stringify({
+        route: state.route,
+        start: state.start,
+        end: state.end,
+      }),
+    });
+    if (!res) return;
+    window.open(res.data.url, "_blank", "noopener");
+  } catch (error) {
+    Dashboard.showError(document.getElementById("content"), error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Export PDF";
+  }
 };
 
 Dashboard.route = async function () {
@@ -82,6 +116,7 @@ document.getElementById("apply-dates").addEventListener("click", () => {
 });
 
 document.getElementById("logout-btn").addEventListener("click", Dashboard.logout);
+document.getElementById("export-btn").addEventListener("click", Dashboard.exportCurrentReport);
 document.getElementById("menu-btn").addEventListener("click", () => {
   document.getElementById("sidebar").classList.toggle("open");
 });
