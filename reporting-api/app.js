@@ -50,7 +50,7 @@ function createApp() {
 
   const exportsDir = path.join(__dirname, "exports");
   fs.mkdirSync(exportsDir, { recursive: true });
-  app.use("/exports", express.static(exportsDir));
+  app.use("/api/exports/files", express.static(exportsDir));
 
   app.use(createStaticRouter());
   app.use(createActivityRouter());

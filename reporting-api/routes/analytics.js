@@ -119,12 +119,13 @@ function createAnalyticsRouter({ requireAuth }) {
 
     try {
       const fileName = await createExportPdf(route, range.data.start, range.data.end);
-      const url = `${req.protocol}://${req.get("host")}/exports/${fileName}`;
+      const filePath = `/api/exports/files/${fileName}`;
+      const url = `${req.protocol}://${req.get("host")}${filePath}`;
       return res.status(201).json({
         success: true,
         data: {
           file_name: fileName,
-          path: `/exports/${fileName}`,
+          path: filePath,
           url,
         },
       });
