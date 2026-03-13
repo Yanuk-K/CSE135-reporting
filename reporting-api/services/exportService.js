@@ -53,32 +53,32 @@ function decodeDataUrl(dataUrl) {
   return Buffer.from(match[2], "base64");
 }
 
-function writeChartImages(doc, chartImages) {
-  if (!Array.isArray(chartImages) || chartImages.length === 0) return;
+function writeScreenshots(doc, screenshots) {
+  if (!Array.isArray(screenshots) || screenshots.length === 0) return;
 
-  chartImages.forEach((chart) => {
-    const imageBuffer = decodeDataUrl(chart.data_url);
+  screenshots.forEach((screenshot, index) => {
+    const imageBuffer = decodeDataUrl(screenshot.data_url);
     if (!imageBuffer) return;
 
-    if (doc.y > 500) doc.addPage();
-    doc.moveDown();
-    doc.font("Helvetica-Bold").fontSize(13).text(chart.label || "Chart");
+    if (index > 0 || doc.y > 140) doc.addPage();
+    doc.font("Helvetica-Bold").fontSize(13).text(screenshot.label || "Dashboard View");
     doc.moveDown(0.4);
     doc.image(imageBuffer, {
-      fit: [500, 260],
+      fit: [500, 640],
       align: "center",
-      valign: "center",
+      valign: "top",
     });
     doc.moveDown();
   });
 }
 
-function buildOverviewPdf(doc, start, end, data, chartImages) {
+function buildOverviewPdf(doc, start, end, data, screenshots) {
   doc.font("Helvetica-Bold").fontSize(20).text("Overview Report");
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
   doc.moveDown();
-  writeChartImages(doc, chartImages);
+  writeScreenshots(doc, screenshots);
+  if (screenshots.length) doc.addPage();
   writeRows(doc, [
     `Total Pageviews: ${data.summary.total_pageviews.toLocaleString()}`,
     `Total Sessions: ${data.summary.total_sessions.toLocaleString()}`,
@@ -102,12 +102,13 @@ function buildOverviewPdf(doc, start, end, data, chartImages) {
   ]);
 }
 
-function buildPerformancePdf(doc, start, end, data, chartImages) {
+function buildPerformancePdf(doc, start, end, data, screenshots) {
   doc.font("Helvetica-Bold").fontSize(20).text("Performance Report");
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
   doc.moveDown();
-  writeChartImages(doc, chartImages);
+  writeScreenshots(doc, screenshots);
+  if (screenshots.length) doc.addPage();
   writeRows(
     doc,
     Object.entries(data).flatMap(([metric, value]) => [
@@ -120,14 +121,15 @@ function buildPerformancePdf(doc, start, end, data, chartImages) {
   );
 }
 
-function buildErrorsPdf(doc, start, end, data, chartImages) {
+function buildErrorsPdf(doc, start, end, data, screenshots) {
   const totalErrors = data.timeseries.reduce((sum, row) => sum + Number(row.errors || 0), 0);
 
   doc.font("Helvetica-Bold").fontSize(20).text("Errors Report");
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
   doc.moveDown();
-  writeChartImages(doc, chartImages);
+  writeScreenshots(doc, screenshots);
+  if (screenshots.length) doc.addPage();
   writeRows(doc, [
     `Total Errors: ${totalErrors.toLocaleString()}`,
     "",
@@ -148,7 +150,7 @@ function buildErrorsPdf(doc, start, end, data, chartImages) {
   ]);
 }
 
-async function createExportPdf(route, start, end, chartImages = []) {
+async function createExportPdf(route, start, end, screenshots = []) {
   await cleanupOldExports();
 
   const reportName = route.replace("/", "") || "report";
@@ -169,11 +171,11 @@ async function createExportPdf(route, start, end, chartImages = []) {
 
   doc.pipe(stream);
   if (route === "/overview") {
-    buildOverviewPdf(doc, start, end, data, chartImages);
+    buildOverviewPdf(doc, start, end, data, screenshots);
   } else if (route === "/performance") {
-    buildPerformancePdf(doc, start, end, data, chartImages);
+    buildPerformancePdf(doc, start, end, data, screenshots);
   } else {
-    buildErrorsPdf(doc, start, end, data, chartImages);
+    buildErrorsPdf(doc, start, end, data, screenshots);
   }
   doc.end();
 

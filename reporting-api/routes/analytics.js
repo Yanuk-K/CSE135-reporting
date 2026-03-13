@@ -122,7 +122,7 @@ function createAnalyticsRouter({ requireAuth }) {
         route,
         range.data.start,
         range.data.end,
-        Array.isArray(req.body?.chart_images) ? req.body.chart_images : []
+        Array.isArray(req.body?.screenshot_images) ? req.body.screenshot_images : []
       );
       const filePath = `/api/exports/files/${fileName}`;
       const url = `${req.protocol}://${req.get("host")}${filePath}`;

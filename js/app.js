@@ -34,54 +34,51 @@ Dashboard.canExport = function (route) {
   return route === "/overview" || route === "/performance" || route === "/errors";
 };
 
-Dashboard.getCanvasImage = function (id, label) {
-  const canvas = document.getElementById(id);
-  if (!canvas || !canvas.width || !canvas.height) return null;
+Dashboard.captureElementImage = async function (element, label) {
+  if (!element || !window.html2canvas) return null;
+
+  const canvas = await window.html2canvas(element, {
+    backgroundColor: "#ffffff",
+    scale: Math.min(window.devicePixelRatio || 1, 2),
+    useCORS: true,
+    logging: false,
+  });
+
   return {
     label,
     data_url: canvas.toDataURL("image/png"),
   };
 };
 
-Dashboard.getZingChartImage = function (id, label) {
-  if (!window.zingchart || !document.getElementById(id)) return null;
+Dashboard.collectExportScreenshots = async function (route) {
+  const content = document.getElementById("content");
+  if (!content) return [];
 
-  try {
-    const imageData = zingchart.exec(id, "getimagedata", {
-      download: false,
-      filetype: "png",
-    });
-    const dataUrl =
-      typeof imageData === "string"
-        ? imageData
-        : imageData?.data || imageData?.image || imageData?.imagedata || imageData?.dataurl;
-    if (!dataUrl) return null;
-    return {
-      label,
-      data_url: dataUrl,
-    };
-  } catch (_) {
-    return null;
-  }
-};
-
-Dashboard.collectExportCharts = function (route) {
-  const charts = [];
-
+  let elements;
   if (route === "/overview") {
-    const chart = Dashboard.getCanvasImage("chart", "Pageviews Trend");
-    if (chart) charts.push(chart);
-  }
-  if (route === "/performance") {
-    const chart = Dashboard.getCanvasImage("perf-chart", "Performance Metrics");
-    if (chart) charts.push(chart);
-  }
-  if (route === "/errors") {
-    const chart = Dashboard.getZingChartImage("errorTrendChart", "Errors Trend");
-    if (chart) charts.push(chart);
+    elements = [
+      document.getElementById("cards"),
+      document.getElementById("chart"),
+      document.getElementById("top-pages"),
+    ];
+  } else {
+    elements = Array.from(content.children);
   }
 
-  return charts;
+  const visibleElements = elements.filter(
+    (element) => element && element.getBoundingClientRect().width > 0 && element.getBoundingClientRect().height > 0
+  );
+
+  const screenshots = [];
+  for (const [index, element] of visibleElements.entries()) {
+    const screenshot = await Dashboard.captureElementImage(
+      element,
+      `${route.replace("/", "").toUpperCase() || "REPORT"} Section ${index + 1}`
+    );
+    if (screenshot) screenshots.push(screenshot);
+  }
+
+  return screenshots;
 };
 
 Dashboard.exportCurrentReport = async function () {
@@ -93,13 +90,14 @@ Dashboard.exportCurrentReport = async function () {
   button.textContent = "Exporting...";
 
   try {
+    const screenshots = await Dashboard.collectExportScreenshots(state.route);
     const res = await Dashboard.apiFetch("/api/exports/report", {
       method: "POST",
       body: JSON.stringify({
         route: state.route,
         start: state.start,
         end: state.end,
-        chart_images: Dashboard.collectExportCharts(state.route),
+        screenshot_images: screenshots,
       }),
     });
     if (!res) return;
