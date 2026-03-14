@@ -4,6 +4,7 @@ const { proj } = require("../db");
 
 function createAdminRouter({ requireAuth, requireRole }) {
   const router = express.Router();
+  const allowedSections = new Set(["overview", "sessions", "performance", "errors"]);
 
   router.get("/api/users", requireAuth, requireRole("admin"), async (req, res) => {
     try {
@@ -103,6 +104,39 @@ function createAdminRouter({ requireAuth, requireRole }) {
 
       await proj.query("DELETE FROM users WHERE id = ?", [id]);
       res.status(200).json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  router.put("/api/users/:id/sections", requireAuth, requireRole("owner"), async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, error: "invalid user id" });
+    }
+
+    const sections = Array.isArray(req.body?.sections) ? [...new Set(req.body.sections)] : null;
+    if (!sections) {
+      return res.status(400).json({ success: false, error: "sections must be an array" });
+    }
+    if (sections.some((section) => !allowedSections.has(section))) {
+      return res.status(400).json({ success: false, error: "invalid section" });
+    }
+
+    try {
+      const [[target]] = await proj.query("SELECT id, role FROM users WHERE id = ? LIMIT 1", [id]);
+      if (!target) return res.status(404).json({ success: false, error: "user not found" });
+      if (target.role !== "admin") {
+        return res.status(400).json({ success: false, error: "sections can only be assigned to analysts" });
+      }
+
+      await proj.query("DELETE FROM user_section_access WHERE user_id = ?", [id]);
+      if (sections.length) {
+        const values = sections.map((section) => [id, section]);
+        await proj.query("INSERT INTO user_section_access (user_id, section_key) VALUES ?", [values]);
+      }
+
+      res.status(200).json({ success: true, data: { user_id: id, sections } });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
     }
