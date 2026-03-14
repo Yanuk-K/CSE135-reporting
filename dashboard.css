@@ -134,6 +134,13 @@ body {
   width: 100%;
 }
 
+.chart-wrap-square {
+  max-width: 220px;
+  height: 220px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .chart-canvas {
   width: 100% !important;
   height: 100% !important;
@@ -190,6 +197,11 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
 
 .export-capture .chart-wrap {
   height: 250px;
+}
+
+.export-capture .chart-wrap-square {
+  max-width: 260px;
+  height: 260px;
 }
 
 .export-capture .panel {
@@ -285,5 +297,6 @@ button:disabled { cursor: wait; opacity: 0.7; }
   .admin-form { grid-template-columns: 1fr; }
   .report-builder-form { grid-template-columns: 1fr; }
   .chart-wrap { height: 160px; }
+  .chart-wrap-square { max-width: 180px; height: 180px; }
   .report-builder-toggles { gap: 8px; }
 }

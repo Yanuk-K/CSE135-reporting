@@ -168,10 +168,13 @@ Dashboard.renderManagedChart = function (canvas, config, key) {
 
   const chartType = String(mergedConfig.type || "line").toLowerCase();
   if (mergedConfig.options.maintainAspectRatio == null) {
-    mergedConfig.options.maintainAspectRatio = !["line", "bar"].includes(chartType);
+    mergedConfig.options.maintainAspectRatio = false;
   }
-  if (mergedConfig.options.aspectRatio == null && ["doughnut", "pie", "polararea"].includes(chartType)) {
-    mergedConfig.options.aspectRatio = 1;
+
+  const isCircularChart = ["doughnut", "pie", "polararea"].includes(chartType);
+  const wrap = canvas.parentElement;
+  if (wrap && wrap.classList) {
+    wrap.classList.toggle("chart-wrap-square", isCircularChart);
   }
 
   if (mergedConfig.data && Array.isArray(mergedConfig.data.datasets)) {
