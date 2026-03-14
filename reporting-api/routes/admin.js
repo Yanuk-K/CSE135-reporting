@@ -9,7 +9,21 @@ function createAdminRouter({ requireAuth, requireRole }) {
   router.get("/api/users", requireAuth, requireRole("admin"), async (req, res) => {
     try {
       const [rows] = await proj.query(
-        "SELECT id, email, display_name, role, created_at, last_login FROM users ORDER BY id DESC"
+        `SELECT
+           u.id,
+           u.email,
+           u.display_name,
+           u.role,
+           u.created_at,
+           u.last_login,
+           COALESCE(
+             (SELECT GROUP_CONCAT(usa.section_key ORDER BY usa.section_key SEPARATOR ',')
+              FROM user_section_access usa
+              WHERE usa.user_id = u.id),
+             ''
+           ) AS sections
+         FROM users u
+         ORDER BY u.id DESC`
       );
       res.status(200).json({ success: true, data: rows });
     } catch (err) {

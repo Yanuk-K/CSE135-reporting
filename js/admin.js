@@ -6,6 +6,8 @@ Dashboard.roleOptions = [
   { value: "owner", label: "super admin" },
 ];
 
+Dashboard.sectionOptions = ["overview", "sessions", "performance", "errors"];
+
 Dashboard.roleLabel = function (value) {
   const match = Dashboard.roleOptions.find((option) => option.value === value);
   return match ? match.label : value;
@@ -18,6 +20,7 @@ Dashboard.renderAdmin = async function () {
   try {
     const usersRes = await Dashboard.apiFetch("/api/users");
     if (!usersRes) return;
+    const isOwner = sessionStorage.getItem("role") === "owner";
 
     content.innerHTML = `
       <section class="panel">
@@ -52,6 +55,25 @@ Dashboard.renderAdmin = async function () {
 
     (usersRes.data || []).forEach((user) => {
       const tr = document.createElement("tr");
+      const assignedSections = (() => {
+        if (Array.isArray(user.sections)) return user.sections;
+        if (typeof user.sections === "string") {
+          if (user.sections.includes(",")) {
+            return user.sections
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean);
+          }
+          if (user.sections.trim()) return [user.sections.trim()];
+          try {
+            const parsed = JSON.parse(user.sections);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (_) {
+            return [];
+          }
+        }
+        return [];
+      })();
 
       const idTd = document.createElement("td");
       idTd.textContent = String(user.id);
@@ -106,6 +128,42 @@ Dashboard.renderAdmin = async function () {
       actionsTd.appendChild(saveBtn);
       actionsTd.appendChild(document.createTextNode(" "));
       actionsTd.appendChild(deleteBtn);
+
+      if (isOwner && user.role === "admin") {
+        const controls = document.createElement("div");
+        const checkboxes = Dashboard.sectionOptions.map((section) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.value = section;
+          input.checked = assignedSections.includes(section);
+          label.appendChild(input);
+          label.appendChild(document.createTextNode(` ${section}`));
+          controls.appendChild(label);
+          controls.appendChild(document.createTextNode(" "));
+          return input;
+        });
+
+        const saveSectionsBtn = document.createElement("button");
+        saveSectionsBtn.type = "button";
+        saveSectionsBtn.textContent = "Save Sections";
+        saveSectionsBtn.addEventListener("click", async () => {
+          const sections = checkboxes.filter((input) => input.checked).map((input) => input.value);
+          try {
+            await Dashboard.apiFetch(`/api/users/${user.id}/sections`, {
+              method: "PUT",
+              body: JSON.stringify({ sections }),
+            });
+            msg.textContent = "Sections updated.";
+          } catch (error) {
+            msg.textContent = error.message;
+          }
+        });
+
+        controls.appendChild(saveSectionsBtn);
+        actionsTd.appendChild(document.createElement("br"));
+        actionsTd.appendChild(controls);
+      }
 
       tr.appendChild(idTd);
       tr.appendChild(emailTd);
