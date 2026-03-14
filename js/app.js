@@ -366,6 +366,7 @@ Dashboard.collectExportScreenshots = async function (route) {
   if (!content) return [];
 
   const panels = Array.from(content.querySelectorAll(".panel")).filter((panel) => {
+    if (panel.classList.contains("report-builder-panel")) return false;
     if (panel.classList.contains("hidden")) return false;
     const style = window.getComputedStyle(panel);
     return style.display !== "none" && style.visibility !== "hidden";

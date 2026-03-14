@@ -31,36 +31,33 @@ function decodeDataUrl(dataUrl) {
   return Buffer.from(match[2], "base64");
 }
 
-function renderScreenshotAcrossPages(doc, screenshot) {
+function renderScreenshotToCurrentPage(doc, screenshot) {
   const imageBuffer = decodeDataUrl(screenshot?.data_url);
   if (!imageBuffer) return false;
 
   const image = doc.openImage(imageBuffer);
   const left = doc.page.margins.left;
-  const top = doc.y;
   const maxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const firstPageHeight = doc.page.height - top - doc.page.margins.bottom;
-  const fullPageTop = doc.page.margins.top;
-  const fullPageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
-  const scale = maxWidth / image.width;
-  const scaledHeight = image.height * scale;
+  const topMargin = doc.page.margins.top;
+  const bottomMargin = doc.page.margins.bottom;
+  const fullPageHeight = doc.page.height - topMargin - bottomMargin;
 
-  let offset = 0;
-  let pageIndex = 0;
-
-  while (offset < scaledHeight) {
-    const currentTop = pageIndex === 0 ? top : fullPageTop;
-    const visibleHeight = pageIndex === 0 ? firstPageHeight : fullPageHeight;
-
-    if (pageIndex > 0) doc.addPage();
-    doc.save();
-    doc.rect(left, currentTop, maxWidth, visibleHeight).clip();
-    doc.image(imageBuffer, left, currentTop - offset, { width: maxWidth });
-    doc.restore();
-
-    offset += visibleHeight;
-    pageIndex += 1;
+  let availableHeight = doc.page.height - doc.y - bottomMargin;
+  if (availableHeight < 120) {
+    doc.addPage();
+    availableHeight = doc.page.height - doc.y - bottomMargin;
   }
+
+  const widthScale = maxWidth / image.width;
+  const heightScale = availableHeight / image.height;
+  const scale = Math.min(widthScale, heightScale, 1);
+
+  const renderWidth = image.width * scale;
+  const renderHeight = image.height * scale;
+  const x = left + (maxWidth - renderWidth) / 2;
+
+  doc.image(imageBuffer, x, doc.y, { width: renderWidth, height: renderHeight });
+  doc.y += renderHeight + 10;
 
   return true;
 }
@@ -83,18 +80,8 @@ async function createExportPdf(route, start, end, screenshots = []) {
   if (!Array.isArray(screenshots) || !screenshots.length) {
     doc.font("Helvetica").fontSize(11).text("No dashboard screenshot was available for this export.");
   } else {
-    screenshots.forEach((screenshot, index) => {
-      if (index > 0) {
-        doc.addPage();
-      }
-
-      const label = String(screenshot?.label || "").trim();
-      if (label) {
-        doc.font("Helvetica-Bold").fontSize(12).text(label);
-        doc.moveDown(0.3);
-      }
-
-      const rendered = renderScreenshotAcrossPages(doc, screenshot);
+    screenshots.forEach((screenshot) => {
+      const rendered = renderScreenshotToCurrentPage(doc, screenshot);
       if (!rendered) {
         doc.font("Helvetica").fontSize(11).text("This section could not be rendered.");
       }
