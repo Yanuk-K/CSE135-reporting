@@ -22,6 +22,12 @@ Dashboard.renderSessions = async function (start, end) {
   Dashboard.showLoading(content);
   const canEditComments = Dashboard.canEditComments();
   const presentation = Dashboard.getReportPresentation("sessions");
+  const showCards = Dashboard.isBlockEnabled("sessions", presentation, "cards", "cards");
+  const showTrend = Dashboard.isBlockEnabled("sessions", presentation, "sessionsTrend", "charts");
+  const showDepth = Dashboard.isBlockEnabled("sessions", presentation, "sessionsDepth", "charts");
+  const showBounce = Dashboard.isBlockEnabled("sessions", presentation, "sessionsBounce", "charts");
+  const showTable = Dashboard.isBlockEnabled("sessions", presentation, "sessionsTable", "table");
+  const showComment = Dashboard.isBlockEnabled("sessions", presentation, "comment", "comments");
 
   try {
     const data = await Dashboard.apiFetch(`/api/sessions?start=${start}&end=${end}`);
@@ -61,10 +67,12 @@ Dashboard.renderSessions = async function (start, end) {
             </label>
           </div>
           <div class="report-builder-toggles">
-            <label><input type="checkbox" id="sessions-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
-            <label><input type="checkbox" id="sessions-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
-            <label><input type="checkbox" id="sessions-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
-            <label><input type="checkbox" id="sessions-inc-comments" ${presentation.include.comments ? "checked" : ""}/> Comments</label>
+            <label><input type="checkbox" id="sessions-block-cards" ${showCards ? "checked" : ""}/> Summary Cards</label>
+            <label><input type="checkbox" id="sessions-block-trend" ${showTrend ? "checked" : ""}/> Sessions Over Time</label>
+            <label><input type="checkbox" id="sessions-block-depth" ${showDepth ? "checked" : ""}/> Session Depth Chart</label>
+            <label><input type="checkbox" id="sessions-block-bounce" ${showBounce ? "checked" : ""}/> Bounce vs Engaged Chart</label>
+            <label><input type="checkbox" id="sessions-block-table" ${showTable ? "checked" : ""}/> Session Buckets Table</label>
+            <label><input type="checkbox" id="sessions-block-comment" ${showComment ? "checked" : ""}/> Analyst Comment</label>
           </div>
         </section>
       `
@@ -129,7 +137,7 @@ Dashboard.renderSessions = async function (start, end) {
       ${builderHtml}
       <section class="panel">
         <h2>Session Report</h2>
-        ${presentation.include.cards ? '<div class="cards-grid">' : '<div class="cards-grid hidden">'}
+        ${showCards ? '<div class="cards-grid">' : '<div class="cards-grid hidden">'}
           <div class="metric-card"><div class="metric-label">Total Sessions</div><div class="metric-value">${Number(summary.total_sessions || 0).toLocaleString()}</div></div>
           <div class="metric-card"><div class="metric-label">Avg Duration</div><div class="metric-value">${summary.avg_duration_seconds == null ? "n/a" : `${Math.round(summary.avg_duration_seconds)} sec`}</div></div>
           <div class="metric-card"><div class="metric-label">Pages / Session</div><div class="metric-value">${summary.avg_pages_per_session == null ? "n/a" : Number(summary.avg_pages_per_session).toFixed(2)}</div></div>
@@ -137,32 +145,32 @@ Dashboard.renderSessions = async function (start, end) {
         </div>
       </section>
 
-      <section class="panel ${presentation.include.charts ? "" : "hidden"}">
+      <section class="panel ${showTrend ? "" : "hidden"}">
         <h3>Sessions per Day</h3>
         <div id="sessionTrendChart" style="height:220px;width:100%;"></div>
       </section>
 
-      <section class="panel ${presentation.include.charts ? "" : "hidden"}">
+      <section class="panel ${showDepth ? "" : "hidden"}">
         <h3>Session Depth</h3>
         <div class="chart-wrap"><canvas id="sessionDepthChart" class="chart-canvas"></canvas></div>
       </section>
 
-      <section class="panel ${presentation.include.charts ? "" : "hidden"}">
+      <section class="panel ${showBounce ? "" : "hidden"}">
         <h3>Bounce vs Engaged</h3>
         <div class="chart-wrap"><canvas id="sessionBounceChart" class="chart-canvas"></canvas></div>
       </section>
 
-      <section class="panel ${presentation.include.table ? "" : "hidden"}">
+      <section class="panel ${showTable ? "" : "hidden"}">
         <h3>Session Buckets</h3>
         <div id="session-table"></div>
-        <div class="analyst-comment ${presentation.include.comments ? "" : "hidden"}">
+        <div class="analyst-comment ${showComment ? "" : "hidden"}">
           <h3>Analyst Comment</h3>
           <div id="session-comment-body"></div>
         </div>
       </section>
     `;
 
-    if (presentation.include.charts) {
+    if (showTrend) {
       zingchart.render({
         id: "sessionTrendChart",
         data: {
@@ -174,6 +182,8 @@ Dashboard.renderSessions = async function (start, end) {
         width: "100%",
       });
 
+    }
+    if (showDepth) {
       Dashboard.renderManagedChart(document.getElementById("sessionDepthChart"), {
         type: presentation.chartTypes["sessions-depth"] || "bar",
         data: {
@@ -186,7 +196,9 @@ Dashboard.renderSessions = async function (start, end) {
         },
         options: { plugins: { legend: { display: false } } },
       }, "sessionDepthChart");
+    }
 
+    if (showBounce) {
       Dashboard.renderManagedChart(document.getElementById("sessionBounceChart"), {
         type: presentation.chartTypes["sessions-bounce"] || "doughnut",
         data: {
@@ -200,7 +212,7 @@ Dashboard.renderSessions = async function (start, end) {
       }, "sessionBounceChart");
     }
 
-    if (presentation.include.table) {
+    if (showTable) {
       const table = document.createElement("table");
       table.innerHTML = "<thead><tr><th>Bucket</th><th>Sessions</th><th>Share</th></tr></thead>";
       const tbody = document.createElement("tbody");
@@ -215,7 +227,7 @@ Dashboard.renderSessions = async function (start, end) {
       document.getElementById("session-table").appendChild(table);
     }
 
-    if (presentation.include.comments) {
+    if (showComment) {
       Dashboard.renderCommentField(
         document.getElementById("session-comment-body"),
         "session-comment",
@@ -227,10 +239,12 @@ Dashboard.renderSessions = async function (start, end) {
       Dashboard.bindPresentationControl("sessions", "sessions-trend-type", (el, state) => { state.chartTypes["sessions-trend"] = el.value; });
       Dashboard.bindPresentationControl("sessions", "sessions-depth-type", (el, state) => { state.chartTypes["sessions-depth"] = el.value; });
       Dashboard.bindPresentationControl("sessions", "sessions-bounce-type", (el, state) => { state.chartTypes["sessions-bounce"] = el.value; });
-      Dashboard.bindPresentationControl("sessions", "sessions-inc-cards", (el, state) => { state.include.cards = el.checked; });
-      Dashboard.bindPresentationControl("sessions", "sessions-inc-charts", (el, state) => { state.include.charts = el.checked; });
-      Dashboard.bindPresentationControl("sessions", "sessions-inc-table", (el, state) => { state.include.table = el.checked; });
-      Dashboard.bindPresentationControl("sessions", "sessions-inc-comments", (el, state) => { state.include.comments = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-block-cards", (el, state) => { state.enabledBlocks.cards = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-block-trend", (el, state) => { state.enabledBlocks.sessionsTrend = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-block-depth", (el, state) => { state.enabledBlocks.sessionsDepth = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-block-bounce", (el, state) => { state.enabledBlocks.sessionsBounce = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-block-table", (el, state) => { state.enabledBlocks.sessionsTable = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-block-comment", (el, state) => { state.enabledBlocks.comment = el.checked; });
     }
 
     if (Dashboard.destroyCommentEditors) Dashboard.destroyCommentEditors();
@@ -245,6 +259,10 @@ Dashboard.renderPerformance = async function (start, end) {
   Dashboard.showLoading(content);
   const canEditComments = Dashboard.canEditComments();
   const presentation = Dashboard.getReportPresentation("performance");
+  const showPercentiles = Dashboard.isBlockEnabled("performance", presentation, "perfPercentiles", "charts");
+  const showComparison = Dashboard.isBlockEnabled("performance", presentation, "perfComparison", "charts");
+  const showTable = Dashboard.isBlockEnabled("performance", presentation, "perfTable", "table");
+  const showComment = Dashboard.isBlockEnabled("performance", presentation, "comment", "comments");
 
   try {
     const data = await Dashboard.apiFetch(`/api/performance?start=${start}&end=${end}`);
@@ -263,10 +281,10 @@ Dashboard.renderPerformance = async function (start, end) {
             </label>
           </div>
           <div class="report-builder-toggles">
-            <label><input type="checkbox" id="performance-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
-            <label><input type="checkbox" id="performance-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
-            <label><input type="checkbox" id="performance-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
-            <label><input type="checkbox" id="performance-inc-comments" ${presentation.include.comments ? "checked" : ""}/> Comments</label>
+            <label><input type="checkbox" id="performance-block-percentiles" ${showPercentiles ? "checked" : ""}/> Percentiles Chart</label>
+            <label><input type="checkbox" id="performance-block-comparison" ${showComparison ? "checked" : ""}/> p75 Comparison Chart</label>
+            <label><input type="checkbox" id="performance-block-table" ${showTable ? "checked" : ""}/> Metrics Table</label>
+            <label><input type="checkbox" id="performance-block-comment" ${showComment ? "checked" : ""}/> Analyst Comment</label>
           </div>
         </section>
       `
@@ -274,20 +292,20 @@ Dashboard.renderPerformance = async function (start, end) {
 
     content.innerHTML = `
       ${builderHtml}
-      <section class="panel ${presentation.include.charts ? "" : "hidden"}">
+      <section class="panel ${showPercentiles ? "" : "hidden"}">
         <h2>Performance</h2>
         <div class="chart-wrap"><canvas id="perf-chart" class="chart-canvas"></canvas></div>
       </section>
 
-      <section class="panel ${presentation.include.charts ? "" : "hidden"}">
+      <section class="panel ${showComparison ? "" : "hidden"}">
         <h3>p75 Comparison</h3>
         <div class="chart-wrap"><canvas id="perf-radar-chart" class="chart-canvas"></canvas></div>
       </section>
 
-      <section class="panel ${presentation.include.table ? "" : "hidden"}">
+      <section class="panel ${showTable ? "" : "hidden"}">
         <h3>Metrics</h3>
         <div id="perf-table"></div>
-        <div class="analyst-comment ${presentation.include.comments ? "" : "hidden"}">
+        <div class="analyst-comment ${showComment ? "" : "hidden"}">
           <h3>Analyst Comment</h3>
           <div id="perf-comment-body"></div>
         </div>
@@ -337,7 +355,7 @@ Dashboard.renderPerformance = async function (start, end) {
       ],
     };
 
-    if (presentation.include.charts) {
+    if (showPercentiles) {
       Dashboard.renderManagedChart(document.getElementById("perf-chart"), {
         type: "bar",
         data: {
@@ -350,7 +368,9 @@ Dashboard.renderPerformance = async function (start, end) {
         },
         options: { plugins: { legend: { position: "bottom" } } },
       }, "perf-chart");
+    }
 
+    if (showComparison) {
       Dashboard.renderManagedChart(document.getElementById("perf-radar-chart"), {
         type: presentation.chartTypes["perf-radar"] || "radar",
         data: {
@@ -368,7 +388,7 @@ Dashboard.renderPerformance = async function (start, end) {
       }, "perf-radar-chart");
     }
 
-    if (presentation.include.table) {
+    if (showTable) {
       const table = document.createElement("table");
       table.innerHTML = `
         <thead>
@@ -392,7 +412,7 @@ Dashboard.renderPerformance = async function (start, end) {
       document.getElementById("perf-table").appendChild(table);
     }
 
-    if (presentation.include.comments) {
+    if (showComment) {
       Dashboard.renderCommentField(
         document.getElementById("perf-comment-body"),
         "perf-comment",
@@ -402,10 +422,10 @@ Dashboard.renderPerformance = async function (start, end) {
 
     if (canEditComments) {
       Dashboard.bindPresentationControl("performance", "perf-radar-type", (el, state) => { state.chartTypes["perf-radar"] = el.value; });
-      Dashboard.bindPresentationControl("performance", "performance-inc-cards", (el, state) => { state.include.cards = el.checked; });
-      Dashboard.bindPresentationControl("performance", "performance-inc-charts", (el, state) => { state.include.charts = el.checked; });
-      Dashboard.bindPresentationControl("performance", "performance-inc-table", (el, state) => { state.include.table = el.checked; });
-      Dashboard.bindPresentationControl("performance", "performance-inc-comments", (el, state) => { state.include.comments = el.checked; });
+      Dashboard.bindPresentationControl("performance", "performance-block-percentiles", (el, state) => { state.enabledBlocks.perfPercentiles = el.checked; });
+      Dashboard.bindPresentationControl("performance", "performance-block-comparison", (el, state) => { state.enabledBlocks.perfComparison = el.checked; });
+      Dashboard.bindPresentationControl("performance", "performance-block-table", (el, state) => { state.enabledBlocks.perfTable = el.checked; });
+      Dashboard.bindPresentationControl("performance", "performance-block-comment", (el, state) => { state.enabledBlocks.comment = el.checked; });
     }
 
     if (Dashboard.destroyCommentEditors) Dashboard.destroyCommentEditors();
@@ -420,6 +440,11 @@ Dashboard.renderErrors = async function (start, end) {
   Dashboard.showLoading(content);
   const canEditComments = Dashboard.canEditComments();
   const presentation = Dashboard.getReportPresentation("errors");
+  const showCards = Dashboard.isBlockEnabled("errors", presentation, "cards", "cards");
+  const showTrend = Dashboard.isBlockEnabled("errors", presentation, "errorTrend", "charts");
+  const showTop = Dashboard.isBlockEnabled("errors", presentation, "errorTop", "charts");
+  const showTable = Dashboard.isBlockEnabled("errors", presentation, "errorTable", "table");
+  const showComment = Dashboard.isBlockEnabled("errors", presentation, "comment", "comments");
 
   try {
     const data = await Dashboard.apiFetch(`/api/errors?start=${start}&end=${end}`);
@@ -453,10 +478,11 @@ Dashboard.renderErrors = async function (start, end) {
             </label>
           </div>
           <div class="report-builder-toggles">
-            <label><input type="checkbox" id="errors-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
-            <label><input type="checkbox" id="errors-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
-            <label><input type="checkbox" id="errors-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
-            <label><input type="checkbox" id="errors-inc-comments" ${presentation.include.comments ? "checked" : ""}/> Comments</label>
+            <label><input type="checkbox" id="errors-block-cards" ${showCards ? "checked" : ""}/> Summary Cards</label>
+            <label><input type="checkbox" id="errors-block-trend" ${showTrend ? "checked" : ""}/> Error Trend Chart</label>
+            <label><input type="checkbox" id="errors-block-top" ${showTop ? "checked" : ""}/> Top Errors Chart</label>
+            <label><input type="checkbox" id="errors-block-table" ${showTable ? "checked" : ""}/> Error Table</label>
+            <label><input type="checkbox" id="errors-block-comment" ${showComment ? "checked" : ""}/> Analyst Comment</label>
           </div>
         </section>
       `
@@ -494,7 +520,7 @@ Dashboard.renderErrors = async function (start, end) {
 
     content.innerHTML = `
       ${builderHtml}
-      <section class="panel ${presentation.include.cards ? "" : "hidden"}">
+      <section class="panel ${showCards ? "" : "hidden"}">
         <h2>Error Report</h2>
         <div class="vitals-cards">
           <div class="vital-card">
@@ -504,17 +530,17 @@ Dashboard.renderErrors = async function (start, end) {
         </div>
       </section>
 
-      <section class="panel ${presentation.include.charts ? "" : "hidden"}">
+      <section class="panel ${showTrend ? "" : "hidden"}">
         <h3>Errors per Day</h3>
         <div id="errorTrendChart" style="height:220px;width:100%;"></div>
       </section>
 
-      <section class="panel ${presentation.include.charts ? "" : "hidden"}">
+      <section class="panel ${showTop ? "" : "hidden"}">
         <h3>Top Error Messages</h3>
         <div class="chart-wrap"><canvas id="errorTopChart" class="chart-canvas"></canvas></div>
       </section>
 
-      <section class="panel ${presentation.include.table ? "" : "hidden"}">
+      <section class="panel ${showTable ? "" : "hidden"}">
         <h3>Error Frequency</h3>
         <table class="perf-table">
           <thead>
@@ -522,7 +548,7 @@ Dashboard.renderErrors = async function (start, end) {
           </thead>
           <tbody id="errorBody"></tbody>
         </table>
-        <div class="analyst-comment ${presentation.include.comments ? "" : "hidden"}">
+        <div class="analyst-comment ${showComment ? "" : "hidden"}">
           <h3>Analyst Comment</h3>
           <div id="error-comment-body"></div>
         </div>
@@ -532,7 +558,7 @@ Dashboard.renderErrors = async function (start, end) {
     const totalErrorEl = document.getElementById("totalErrors");
     if (totalErrorEl) totalErrorEl.textContent = totalErrors;
 
-    if (presentation.include.charts) {
+    if (showTrend) {
       zingchart.render({
         id: "errorTrendChart",
         data: {
@@ -544,7 +570,9 @@ Dashboard.renderErrors = async function (start, end) {
         height: 220,
         width: "100%",
       });
+    }
 
+    if (showTop) {
       Dashboard.renderManagedChart(document.getElementById("errorTopChart"), {
         type: presentation.chartTypes["errors-top"] || "bar",
         data: {
@@ -558,7 +586,7 @@ Dashboard.renderErrors = async function (start, end) {
       }, "errorTopChart");
     }
 
-    if (presentation.include.table) {
+    if (showTable) {
       const tbody = document.getElementById("errorBody");
       for (const row of byMessage) {
         const tr = document.createElement("tr");
@@ -567,7 +595,7 @@ Dashboard.renderErrors = async function (start, end) {
       }
     }
 
-    if (presentation.include.comments) {
+    if (showComment) {
       Dashboard.renderCommentField(
         document.getElementById("error-comment-body"),
         "error-comment",
@@ -578,10 +606,11 @@ Dashboard.renderErrors = async function (start, end) {
     if (canEditComments) {
       Dashboard.bindPresentationControl("errors", "errors-trend-type", (el, state) => { state.chartTypes["errors-trend"] = el.value; });
       Dashboard.bindPresentationControl("errors", "errors-top-type", (el, state) => { state.chartTypes["errors-top"] = el.value; });
-      Dashboard.bindPresentationControl("errors", "errors-inc-cards", (el, state) => { state.include.cards = el.checked; });
-      Dashboard.bindPresentationControl("errors", "errors-inc-charts", (el, state) => { state.include.charts = el.checked; });
-      Dashboard.bindPresentationControl("errors", "errors-inc-table", (el, state) => { state.include.table = el.checked; });
-      Dashboard.bindPresentationControl("errors", "errors-inc-comments", (el, state) => { state.include.comments = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-block-cards", (el, state) => { state.enabledBlocks.cards = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-block-trend", (el, state) => { state.enabledBlocks.errorTrend = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-block-top", (el, state) => { state.enabledBlocks.errorTop = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-block-table", (el, state) => { state.enabledBlocks.errorTable = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-block-comment", (el, state) => { state.enabledBlocks.comment = el.checked; });
     }
 
     if (Dashboard.destroyCommentEditors) Dashboard.destroyCommentEditors();

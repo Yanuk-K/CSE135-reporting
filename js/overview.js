@@ -42,6 +42,11 @@ Dashboard.renderCards = function (data) {
 Dashboard.renderOverview = async function () {
   const content = document.getElementById("content");
   const presentation = Dashboard.getReportPresentation("overview");
+  const showCards = Dashboard.isBlockEnabled("overview", presentation, "cards", "cards");
+  const showTrendChart = Dashboard.isBlockEnabled("overview", presentation, "trendChart", "charts");
+  const showTopPagesChart = Dashboard.isBlockEnabled("overview", presentation, "topPagesChart", "charts");
+  const showTopPagesTable = Dashboard.isBlockEnabled("overview", presentation, "topPagesTable", "table");
+  const showComment = Dashboard.isBlockEnabled("overview", presentation, "comment", "comments");
   const canEditComments = Dashboard.canEditComments();
   const builderHtml = canEditComments
     ? `
@@ -62,21 +67,22 @@ Dashboard.renderOverview = async function () {
           </label>
         </div>
         <div class="report-builder-toggles">
-          <label><input type="checkbox" id="overview-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
-          <label><input type="checkbox" id="overview-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
-          <label><input type="checkbox" id="overview-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
-          <label><input type="checkbox" id="overview-inc-comments" ${presentation.include.comments ? "checked" : ""}/> Comments</label>
+          <label><input type="checkbox" id="overview-block-cards" ${showCards ? "checked" : ""}/> Summary Cards</label>
+          <label><input type="checkbox" id="overview-block-trend" ${showTrendChart ? "checked" : ""}/> Daily Trend Chart</label>
+          <label><input type="checkbox" id="overview-block-top-chart" ${showTopPagesChart ? "checked" : ""}/> Top Pages Chart</label>
+          <label><input type="checkbox" id="overview-block-top-table" ${showTopPagesTable ? "checked" : ""}/> Top Pages Table</label>
+          <label><input type="checkbox" id="overview-block-comment" ${showComment ? "checked" : ""}/> Analyst Comment</label>
         </div>
       </section>
     `
     : "";
   content.innerHTML = `
     ${builderHtml}
-    ${presentation.include.cards ? '<div id="cards" class="cards-grid"></div>' : ""}
-    ${presentation.include.charts ? '<section class="panel"><h3>Daily Pageviews Trend</h3><div class="chart-wrap"><canvas id="overview-trend-chart" class="chart-canvas"></canvas></div></section>' : ""}
-    ${presentation.include.charts ? '<section class="panel"><h3>Top Pages Distribution</h3><div class="chart-wrap"><canvas id="overview-top-chart" class="chart-canvas"></canvas></div></section>' : ""}
-    ${presentation.include.table ? '<section class="panel"><h3>Top Pages Table</h3><div id="top-pages"></div></section>' : ""}
-    ${presentation.include.comments ? '<section class="panel analyst-comment"><h3>Analyst Comment</h3><div id="overview-comment-body"></div></section>' : ""}
+    ${showCards ? '<div id="cards" class="cards-grid"></div>' : ""}
+    ${showTrendChart ? '<section class="panel"><h3>Daily Pageviews Trend</h3><div class="chart-wrap"><canvas id="overview-trend-chart" class="chart-canvas"></canvas></div></section>' : ""}
+    ${showTopPagesChart ? '<section class="panel"><h3>Top Pages Distribution</h3><div class="chart-wrap"><canvas id="overview-top-chart" class="chart-canvas"></canvas></div></section>' : ""}
+    ${showTopPagesTable ? '<section class="panel"><h3>Top Pages Table</h3><div id="top-pages"></div></section>' : ""}
+    ${showComment ? '<section class="panel analyst-comment"><h3>Analyst Comment</h3><div id="overview-comment-body"></div></section>' : ""}
   `;
 
   try {
@@ -141,13 +147,13 @@ Dashboard.renderOverview = async function () {
       ],
     };
 
-    if (presentation.include.cards) {
+    if (showCards) {
       Dashboard.renderCards(dashboardData);
     }
 
-    if (presentation.include.charts) {
+    if (showTrendChart || showTopPagesChart) {
       const trendCanvas = document.getElementById("overview-trend-chart");
-      if (trendCanvas) {
+      if (trendCanvas && showTrendChart) {
         Dashboard.renderManagedChart(trendCanvas, {
           type: presentation.chartTypes["overview-trend"] || "line",
           data: {
@@ -164,7 +170,7 @@ Dashboard.renderOverview = async function () {
       }
 
       const topCanvas = document.getElementById("overview-top-chart");
-      if (topCanvas) {
+      if (topCanvas && showTopPagesChart) {
         Dashboard.renderManagedChart(topCanvas, {
           type: presentation.chartTypes["overview-top-pages"] || "bar",
           data: {
@@ -179,7 +185,7 @@ Dashboard.renderOverview = async function () {
       }
     }
 
-    if (presentation.include.table) {
+    if (showTopPagesTable) {
       const tableContainer = document.getElementById("top-pages");
       if (tableContainer) {
         const table = document.createElement("table");
@@ -195,7 +201,7 @@ Dashboard.renderOverview = async function () {
       }
     }
 
-    if (presentation.include.comments) {
+    if (showComment) {
       const commentContainer = document.getElementById("overview-comment-body");
       if (commentContainer) {
         if (canEditComments) {
@@ -221,17 +227,20 @@ Dashboard.renderOverview = async function () {
       Dashboard.bindPresentationControl("overview", "overview-top-type", (el, state) => {
         state.chartTypes["overview-top-pages"] = el.value;
       });
-      Dashboard.bindPresentationControl("overview", "overview-inc-cards", (el, state) => {
-        state.include.cards = el.checked;
+      Dashboard.bindPresentationControl("overview", "overview-block-cards", (el, state) => {
+        state.enabledBlocks.cards = el.checked;
       });
-      Dashboard.bindPresentationControl("overview", "overview-inc-charts", (el, state) => {
-        state.include.charts = el.checked;
+      Dashboard.bindPresentationControl("overview", "overview-block-trend", (el, state) => {
+        state.enabledBlocks.trendChart = el.checked;
       });
-      Dashboard.bindPresentationControl("overview", "overview-inc-table", (el, state) => {
-        state.include.table = el.checked;
+      Dashboard.bindPresentationControl("overview", "overview-block-top-chart", (el, state) => {
+        state.enabledBlocks.topPagesChart = el.checked;
       });
-      Dashboard.bindPresentationControl("overview", "overview-inc-comments", (el, state) => {
-        state.include.comments = el.checked;
+      Dashboard.bindPresentationControl("overview", "overview-block-top-table", (el, state) => {
+        state.enabledBlocks.topPagesTable = el.checked;
+      });
+      Dashboard.bindPresentationControl("overview", "overview-block-comment", (el, state) => {
+        state.enabledBlocks.comment = el.checked;
       });
     }
 

@@ -38,11 +38,24 @@ Dashboard.getSpreadPalette = function (count) {
 
 Dashboard.defaultPresentationBySection = {
   overview: {
-    include: { cards: true, charts: true, table: true, comments: true },
+    enabledBlocks: {
+      cards: true,
+      trendChart: true,
+      topPagesChart: true,
+      topPagesTable: true,
+      comment: true,
+    },
     chartTypes: { "overview-trend": "line", "overview-top-pages": "bar" },
   },
   sessions: {
-    include: { cards: true, charts: true, table: true, comments: true },
+    enabledBlocks: {
+      cards: true,
+      sessionsTrend: true,
+      sessionsDepth: true,
+      sessionsBounce: true,
+      sessionsTable: true,
+      comment: true,
+    },
     chartTypes: {
       "sessions-trend": "line",
       "sessions-depth": "bar",
@@ -50,11 +63,22 @@ Dashboard.defaultPresentationBySection = {
     },
   },
   performance: {
-    include: { cards: true, charts: true, table: true, comments: true },
+    enabledBlocks: {
+      perfPercentiles: true,
+      perfComparison: true,
+      perfTable: true,
+      comment: true,
+    },
     chartTypes: { "perf-percentiles": "bar", "perf-radar": "radar" },
   },
   errors: {
-    include: { cards: true, charts: true, table: true, comments: true },
+    enabledBlocks: {
+      cards: true,
+      errorTrend: true,
+      errorTop: true,
+      errorTable: true,
+      comment: true,
+    },
     chartTypes: { "errors-trend": "line", "errors-top": "bar" },
   },
 };
@@ -66,14 +90,42 @@ Dashboard.cloneObject = function (value) {
 Dashboard.getReportPresentation = function (section) {
   if (!section || !Dashboard.defaultPresentationBySection[section]) {
     return {
-      include: { cards: true, charts: true, table: true, comments: true },
+      enabledBlocks: {},
       chartTypes: {},
     };
   }
   if (!Dashboard.reportBuilderState[section]) {
     Dashboard.reportBuilderState[section] = Dashboard.cloneObject(Dashboard.defaultPresentationBySection[section]);
   }
+  const presentation = Dashboard.reportBuilderState[section];
+  if (!presentation.enabledBlocks) {
+    const defaults = Dashboard.defaultPresentationBySection[section]?.enabledBlocks || {};
+    const include = presentation.include || {};
+    presentation.enabledBlocks = {};
+    Object.keys(defaults).forEach((key) => {
+      let fallback = true;
+      if (key === "comment") fallback = include.comments !== false;
+      else if (key.toLowerCase().includes("table")) fallback = include.table !== false;
+      else if (key.toLowerCase().includes("card")) fallback = include.cards !== false;
+      else fallback = include.charts !== false;
+      presentation.enabledBlocks[key] = fallback;
+    });
+  }
   return Dashboard.reportBuilderState[section];
+};
+
+Dashboard.isBlockEnabled = function (section, presentation, blockKey, fallbackGroup) {
+  if (presentation?.enabledBlocks && Object.prototype.hasOwnProperty.call(presentation.enabledBlocks, blockKey)) {
+    return presentation.enabledBlocks[blockKey] !== false;
+  }
+  if (presentation?.include && fallbackGroup && Object.prototype.hasOwnProperty.call(presentation.include, fallbackGroup)) {
+    return presentation.include[fallbackGroup] !== false;
+  }
+  const defaults = Dashboard.defaultPresentationBySection[section]?.enabledBlocks || {};
+  if (Object.prototype.hasOwnProperty.call(defaults, blockKey)) {
+    return defaults[blockKey] !== false;
+  }
+  return true;
 };
 
 Dashboard.updateReportPresentation = function (section, updater) {
@@ -110,12 +162,18 @@ Dashboard.renderManagedChart = function (canvas, config, key) {
     ...config,
     options: {
       responsive: true,
-      maintainAspectRatio: false,
       ...(config.options || {}),
     },
   };
 
   const chartType = String(mergedConfig.type || "line").toLowerCase();
+  if (mergedConfig.options.maintainAspectRatio == null) {
+    mergedConfig.options.maintainAspectRatio = !["line", "bar"].includes(chartType);
+  }
+  if (mergedConfig.options.aspectRatio == null && ["doughnut", "pie", "polararea"].includes(chartType)) {
+    mergedConfig.options.aspectRatio = 1;
+  }
+
   if (mergedConfig.data && Array.isArray(mergedConfig.data.datasets)) {
     const datasetCount = mergedConfig.data.datasets.length;
     const datasetColors = Dashboard.getSpreadPalette(datasetCount);

@@ -131,22 +131,58 @@ Dashboard.renderSavedSnapshot = function (container, snapshot) {
   }
 
   const presentation = snapshot.presentation || {};
-  const include = {
-    cards: presentation?.include?.cards !== false,
-    charts: presentation?.include?.charts !== false,
-    table: presentation?.include?.table !== false,
-  };
+  const showCards = Dashboard.isBlockEnabled(snapshot.section, presentation, "cards", "cards");
+  const showCharts =
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "trendChart", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "topPagesChart", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "sessionsTrend", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "sessionsDepth", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "sessionsBounce", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "perfPercentiles", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "perfComparison", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "errorTrend", "charts") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "errorTop", "charts");
+  const showTables =
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "topPagesTable", "table") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "sessionsTable", "table") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "perfTable", "table") ||
+    Dashboard.isBlockEnabled(snapshot.section, presentation, "errorTable", "table");
 
-  if (include.cards) {
+  if (showCards) {
     Dashboard.renderSavedCards(container, snapshot.cards || []);
   }
-  if (include.charts) {
+  if (showCharts) {
     (snapshot.charts || []).forEach((chartData, index) => {
+      const chartMap = {
+        "overview-trend": "trendChart",
+        "overview-top-pages": "topPagesChart",
+        "sessions-trend": "sessionsTrend",
+        "sessions-depth": "sessionsDepth",
+        "sessions-bounce": "sessionsBounce",
+        "perf-percentiles": "perfPercentiles",
+        "perf-radar": "perfComparison",
+        "errors-trend": "errorTrend",
+        "errors-top": "errorTop",
+      };
+      const enabledKey = chartMap[chartData.id];
+      if (enabledKey && !Dashboard.isBlockEnabled(snapshot.section, presentation, enabledKey, "charts")) {
+        return;
+      }
       Dashboard.renderSavedChart(container, chartData, index, presentation);
     });
   }
-  if (include.table) {
+  if (showTables) {
     (snapshot.tables || []).forEach((tableData) => {
+      const tableMap = {
+        "top-pages": "topPagesTable",
+        "session-buckets": "sessionsTable",
+        "perf-metrics": "perfTable",
+        "top-errors": "errorTable",
+      };
+      const enabledKey = tableMap[tableData.id];
+      if (enabledKey && !Dashboard.isBlockEnabled(snapshot.section, presentation, enabledKey, "table")) {
+        return;
+      }
       Dashboard.renderSavedTable(container, tableData);
     });
   }
@@ -187,7 +223,7 @@ Dashboard.renderSavedPublishedSection = async function (section) {
       snapshot.presentation = report.report_json.presentation;
     }
     Dashboard.renderSavedSnapshot(blocksContainer, snapshot);
-    if (report.report_json?.presentation?.include?.comments !== false) {
+    if (Dashboard.isBlockEnabled(snapshot?.section || section, report.report_json?.presentation || {}, "comment", "comments")) {
       Dashboard.renderSavedComments(blocksContainer, report.report_json);
     }
 
