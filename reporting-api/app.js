@@ -13,6 +13,7 @@ const createActivityRouter = require("./routes/activity");
 const createAuthRouter = require("./routes/auth");
 const createAnalyticsRouter = require("./routes/analytics");
 const createAdminRouter = require("./routes/admin");
+const createReportsRouter = require("./routes/reports");
 
 function createApp() {
   const app = express();
@@ -57,6 +58,7 @@ function createApp() {
   app.use(createAuthRouter());
   app.use(createAnalyticsRouter({ requireAuth }));
   app.use(createAdminRouter({ requireAuth, requireRole }));
+  app.use(createReportsRouter({ requireAuth }));
 
   return app;
 }

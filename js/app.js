@@ -19,6 +19,7 @@ Dashboard.setAuthUI = function (isAuthenticated) {
 Dashboard.setHeaderState = function (state, isAuthenticated) {
   const isLogin = state.route === "/login";
   const canExport = isAuthenticated && Dashboard.canExport(state.route);
+  const canSave = isAuthenticated && Dashboard.canSaveReport(state.route);
   document.getElementById("start-date").value = state.start;
   document.getElementById("end-date").value = state.end;
   document.getElementById("date-controls").classList.toggle("hidden", isLogin);
@@ -27,11 +28,85 @@ Dashboard.setHeaderState = function (state, isAuthenticated) {
     isLogin ? "Guest" : (sessionStorage.getItem("display_name") || "User");
   document.getElementById("export-btn").classList.toggle("hidden", !canExport);
   document.getElementById("export-btn").disabled = !canExport;
+  document.getElementById("save-report-btn").classList.toggle("hidden", !canSave);
+  document.getElementById("save-report-btn").disabled = !canSave;
   Dashboard.setActiveNav(state.route);
 };
 
 Dashboard.canExport = function (route) {
   return route === "/overview" || route === "/sessions" || route === "/performance" || route === "/errors";
+};
+
+Dashboard.canSaveReport = function (route) {
+  const role = sessionStorage.getItem("role");
+  if (role !== "owner" && role !== "admin") return false;
+  return Dashboard.canExport(route);
+};
+
+Dashboard.buildReportDocument = function (state) {
+  const content = document.getElementById("content");
+  const blocks = Array.from(content.querySelectorAll(".panel")).map((panel, index) => {
+    const titleEl = panel.querySelector("h2, h3");
+    const comment = panel.querySelector(".analyst-comment p, .analyst-note p");
+    const tableRows = panel.querySelectorAll("table tbody tr").length;
+    const chartCount = panel.querySelectorAll("canvas, [id*='Chart'], [id*='chart']").length;
+    const type = chartCount ? "chart" : tableRows ? "table" : "text";
+    return {
+      id: `block-${index + 1}`,
+      type,
+      title: titleEl ? titleEl.textContent.trim() : `Block ${index + 1}`,
+      comment: comment ? comment.textContent.trim() : "",
+      html: panel.innerHTML,
+    };
+  });
+
+  return {
+    route: state.route,
+    range: { start: state.start, end: state.end },
+    blocks,
+    saved_at: new Date().toISOString(),
+  };
+};
+
+Dashboard.saveCurrentReport = async function () {
+  const button = document.getElementById("save-report-btn");
+  const state = Dashboard.parseHash(window.location.hash || "#/overview");
+  if (!Dashboard.canSaveReport(state.route)) return;
+
+  button.disabled = true;
+  button.textContent = "Saving...";
+
+  try {
+    const section = state.route.replace("/", "") || "overview";
+    const categoryBySection = {
+      overview: "traffic",
+      sessions: "behavior",
+      performance: "performance",
+      errors: "reliability",
+    };
+    const title = `${section.toUpperCase()} ${state.start} to ${state.end}`;
+    await Dashboard.apiFetch("/api/reports", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        section_key: section,
+        category: categoryBySection[section] || section,
+        report_json: Dashboard.buildReportDocument(state),
+        is_published: false,
+      }),
+    });
+    button.textContent = "Saved";
+  } catch (error) {
+    Dashboard.showError(document.getElementById("content"), error.message);
+    button.textContent = "Save Report";
+    button.disabled = false;
+    return;
+  }
+
+  setTimeout(() => {
+    button.textContent = "Save Report";
+    button.disabled = false;
+  }, 900);
 };
 
 Dashboard.captureElementImage = async function (element, label) {
@@ -149,6 +224,7 @@ document.getElementById("apply-dates").addEventListener("click", () => {
 
 document.getElementById("logout-btn").addEventListener("click", Dashboard.logout);
 document.getElementById("export-btn").addEventListener("click", Dashboard.exportCurrentReport);
+document.getElementById("save-report-btn").addEventListener("click", Dashboard.saveCurrentReport);
 document.getElementById("menu-btn").addEventListener("click", () => {
   document.getElementById("sidebar").classList.toggle("open");
 });
