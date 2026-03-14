@@ -90,6 +90,10 @@ Dashboard.saveCurrentReport = async function () {
       errors: "reliability",
     };
     const title = `${section.toUpperCase()} ${state.start} to ${state.end}`;
+    const screenshots = await Dashboard.collectExportScreenshots(state.route);
+    if (!screenshots.length) {
+      throw new Error("Unable to capture report screenshot");
+    }
     await Dashboard.apiFetch("/api/reports", {
       method: "POST",
       body: JSON.stringify({
@@ -97,6 +101,7 @@ Dashboard.saveCurrentReport = async function () {
         section_key: section,
         category: categoryBySection[section] || section,
         report_json: Dashboard.buildReportDocument(state),
+        screenshot_images: screenshots,
         is_published: false,
       }),
     });

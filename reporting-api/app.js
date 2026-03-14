@@ -19,7 +19,7 @@ function createApp() {
   const app = express();
 
   app.use(cors());
-  app.use(express.json({ limit: "4mb" }));
+  app.use(express.json({ limit: "20mb" }));
 
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
