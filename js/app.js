@@ -1,5 +1,35 @@
 window.Dashboard = window.Dashboard || {};
 
+Dashboard.viewModeBySection = Dashboard.viewModeBySection || {};
+
+Dashboard.getRole = function () {
+  return sessionStorage.getItem("role") || "viewer";
+};
+
+Dashboard.routeToSection = function (route) {
+  const section = String(route || "").replace("/", "");
+  return ["overview", "sessions", "performance", "errors"].includes(section) ? section : null;
+};
+
+Dashboard.canToggleViewMode = function (route) {
+  return ["owner", "admin"].includes(Dashboard.getRole()) && Boolean(Dashboard.routeToSection(route));
+};
+
+Dashboard.getSectionMode = function (section) {
+  if (!section) return "live";
+  if (Dashboard.getRole() === "viewer") return "saved";
+  if (!Dashboard.viewModeBySection[section]) Dashboard.viewModeBySection[section] = "live";
+  return Dashboard.viewModeBySection[section];
+};
+
+Dashboard.toggleCurrentViewMode = function () {
+  const state = Dashboard.parseHash(window.location.hash || "#/overview");
+  const section = Dashboard.routeToSection(state.route);
+  if (!section || !Dashboard.canToggleViewMode(state.route)) return;
+  Dashboard.viewModeBySection[section] = Dashboard.getSectionMode(section) === "saved" ? "live" : "saved";
+  Dashboard.route();
+};
+
 Dashboard.getAuthState = async function (state) {
   try {
     const res = await fetch(`/api/dashboard?start=${state.start}&end=${state.end}`, {
@@ -23,8 +53,11 @@ Dashboard.setAuthUI = function (isAuthenticated) {
 
 Dashboard.setHeaderState = function (state, isAuthenticated) {
   const isLogin = state.route === "/login";
+  const section = Dashboard.routeToSection(state.route);
   const canExport = isAuthenticated && Dashboard.canExport(state.route);
   const canSave = isAuthenticated && Dashboard.canSaveReport(state.route);
+  const canToggleViewMode = isAuthenticated && Dashboard.canToggleViewMode(state.route);
+  const viewModeBtn = document.getElementById("view-mode-btn");
   document.getElementById("start-date").value = state.start;
   document.getElementById("end-date").value = state.end;
   document.getElementById("date-controls").classList.toggle("hidden", isLogin);
@@ -35,10 +68,17 @@ Dashboard.setHeaderState = function (state, isAuthenticated) {
   document.getElementById("export-btn").disabled = !canExport;
   document.getElementById("save-report-btn").classList.toggle("hidden", !canSave);
   document.getElementById("save-report-btn").disabled = !canSave;
+  viewModeBtn.classList.toggle("hidden", !canToggleViewMode);
+  viewModeBtn.disabled = !canToggleViewMode;
+  if (canToggleViewMode && section) {
+    viewModeBtn.textContent = Dashboard.getSectionMode(section) === "saved" ? "View Live Data" : "View Saved Report";
+  }
   Dashboard.setActiveNav(state.route);
 };
 
 Dashboard.canExport = function (route) {
+  const role = Dashboard.getRole();
+  if (role !== "owner" && role !== "admin") return false;
   return route === "/overview" || route === "/sessions" || route === "/performance" || route === "/errors";
 };
 
@@ -73,6 +113,94 @@ Dashboard.buildReportDocument = function (state) {
   };
 };
 
+Dashboard.renderSavedPublishedSection = async function (section) {
+  const content = document.getElementById("content");
+  Dashboard.showLoading(content);
+  const role = Dashboard.getRole();
+
+  try {
+    const latest = await Dashboard.apiFetch(`/api/reports/latest/${section}`);
+    const report = latest && latest.data;
+
+    if (!report) {
+      content.innerHTML = `
+        <section class="panel">
+          <h2>${section.toUpperCase()} Published Report</h2>
+          <p>No published report is available for this section yet.</p>
+        </section>
+      `;
+      return true;
+    }
+
+    content.innerHTML = `
+      <section class="panel">
+        <h2>${report.title || `${section.toUpperCase()} Published Report`}</h2>
+        <p>Published at ${report.updated_at || report.created_at || "-"}</p>
+        <button id="download-saved-pdf-btn" type="button">Download PDF</button>
+      </section>
+      <div id="saved-report-blocks"></div>
+    `;
+
+    const blocksContainer = document.getElementById("saved-report-blocks");
+    const blocks = Array.isArray(report.report_json?.blocks) ? report.report_json.blocks : [];
+    if (!blocks.length) {
+      const panel = document.createElement("section");
+      panel.className = "panel";
+      panel.textContent = "No saved blocks found in this report.";
+      blocksContainer.appendChild(panel);
+    }
+
+    blocks.forEach((block, index) => {
+      const panel = document.createElement("section");
+      panel.className = "panel";
+
+      const title = document.createElement("h3");
+      title.textContent = block.title || `Block ${index + 1}`;
+      panel.appendChild(title);
+
+      if (block.html) {
+        const htmlBody = document.createElement("div");
+        htmlBody.innerHTML = block.html;
+        panel.appendChild(htmlBody);
+      }
+
+      if (block.comment) {
+        const commentWrap = document.createElement("div");
+        commentWrap.className = "analyst-comment";
+        const commentTitle = document.createElement("h3");
+        commentTitle.textContent = "Analyst Comment";
+        const commentBody = document.createElement("p");
+        commentBody.textContent = block.comment;
+        commentWrap.appendChild(commentTitle);
+        commentWrap.appendChild(commentBody);
+        panel.appendChild(commentWrap);
+      }
+
+      blocksContainer.appendChild(panel);
+    });
+
+    const downloadBtn = document.getElementById("download-saved-pdf-btn");
+    downloadBtn.addEventListener("click", async () => {
+      try {
+        const response = await Dashboard.apiFetch(`/api/reports/${report.id}/pdf`);
+        if (response?.data?.url) {
+          window.open(response.data.url, "_blank", "noopener");
+        }
+      } catch (error) {
+        Dashboard.showError(content, error.message);
+      }
+    });
+
+    return true;
+  } catch (error) {
+    if (role === "viewer") {
+      Dashboard.showError(content, error.message);
+      return true;
+    }
+    return false;
+  }
+};
+
 Dashboard.saveCurrentReport = async function () {
   const button = document.getElementById("save-report-btn");
   const state = Dashboard.parseHash(window.location.hash || "#/overview");
@@ -102,7 +230,7 @@ Dashboard.saveCurrentReport = async function () {
         category: categoryBySection[section] || section,
         report_json: Dashboard.buildReportDocument(state),
         screenshot_images: screenshots,
-        is_published: false,
+        is_published: true,
       }),
     });
     button.textContent = "Saved";
@@ -195,6 +323,12 @@ Dashboard.route = async function () {
     return;
   }
 
+  const section = Dashboard.routeToSection(state.route);
+  if (section && Dashboard.getSectionMode(section) === "saved") {
+    await Dashboard.renderSavedPublishedSection(section);
+    return;
+  }
+
   if (state.route === "/overview") {
     await Dashboard.renderOverview();
     return;
@@ -242,6 +376,7 @@ document.getElementById("apply-dates").addEventListener("click", () => {
 document.getElementById("logout-btn").addEventListener("click", Dashboard.logout);
 document.getElementById("export-btn").addEventListener("click", Dashboard.exportCurrentReport);
 document.getElementById("save-report-btn").addEventListener("click", Dashboard.saveCurrentReport);
+document.getElementById("view-mode-btn").addEventListener("click", Dashboard.toggleCurrentViewMode);
 document.getElementById("menu-btn").addEventListener("click", () => {
   document.getElementById("sidebar").classList.toggle("open");
 });

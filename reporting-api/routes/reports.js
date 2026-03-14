@@ -214,6 +214,39 @@ function createReportsRouter({ requireAuth }) {
     }
   });
 
+  router.get("/api/reports/latest/:section_key", requireAuth, async (req, res) => {
+    const sectionKey = String(req.params.section_key || "");
+    if (!allowedSections.has(sectionKey)) {
+      return res.status(400).json({ success: false, error: "invalid section" });
+    }
+
+    try {
+      const [[row]] = await proj.query(
+        `SELECT id, owner_user_id, title, section_key, category, report_json, is_published, created_at, updated_at
+         FROM saved_reports
+         WHERE section_key = ? AND is_published = 1
+         ORDER BY updated_at DESC, id DESC
+         LIMIT 1`,
+        [sectionKey]
+      );
+
+      if (!row) {
+        return res.status(200).json({ success: true, data: null });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...row,
+          report_json: parseStoredJson(row.report_json),
+          pdf_url: buildPdfUrl(req, row.id),
+        },
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   router.get("/api/reports/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
