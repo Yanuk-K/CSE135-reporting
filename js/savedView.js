@@ -13,9 +13,9 @@ Dashboard.renderSavedComments = function (container, reportJson) {
   panel.appendChild(title);
 
   comments.forEach((comment) => {
-    const p = document.createElement("p");
-    p.textContent = comment;
-    panel.appendChild(p);
+    const body = document.createElement("div");
+    body.innerHTML = Dashboard.renderMarkdown ? Dashboard.renderMarkdown(comment) : comment;
+    panel.appendChild(body);
   });
 
   container.appendChild(panel);
@@ -83,7 +83,7 @@ Dashboard.renderSavedTable = function (container, tableData) {
   container.appendChild(panel);
 };
 
-Dashboard.renderSavedChart = function (container, chartData, index) {
+Dashboard.renderSavedChart = function (container, chartData, index, presentation) {
   if (!chartData || !Array.isArray(chartData.labels) || !Array.isArray(chartData.series)) return;
 
   const panel = document.createElement("section");
@@ -96,7 +96,8 @@ Dashboard.renderSavedChart = function (container, chartData, index) {
   container.appendChild(panel);
 
   const palette = ["#2E86C1", "#60a5fa", "#94a3b8", "#64748b"];
-  const chartType = chartData.type === "bar" ? "bar" : "line";
+  const preferredType = presentation?.chartTypes?.[chartData.id] || chartData.type;
+  const chartType = ["line", "bar", "doughnut", "radar"].includes(preferredType) ? preferredType : "line";
   new Chart(canvas, {
     type: chartType,
     data: {
@@ -106,9 +107,9 @@ Dashboard.renderSavedChart = function (container, chartData, index) {
         data: Array.isArray(series?.values) ? series.values : [],
         borderColor: palette[seriesIndex % palette.length],
         backgroundColor: palette[seriesIndex % palette.length],
-        fill: false,
+        fill: chartType === "radar",
         borderWidth: 2,
-        tension: 0.2,
+        tension: chartType === "line" ? 0.2 : 0,
       })),
     },
     options: {
@@ -129,19 +130,33 @@ Dashboard.renderSavedSnapshot = function (container, snapshot) {
     return;
   }
 
-  Dashboard.renderSavedCards(container, snapshot.cards || []);
-  (snapshot.charts || []).forEach((chartData, index) => {
-    Dashboard.renderSavedChart(container, chartData, index);
-  });
-  (snapshot.tables || []).forEach((tableData) => {
-    Dashboard.renderSavedTable(container, tableData);
-  });
+  const presentation = snapshot.presentation || {};
+  const include = {
+    cards: presentation?.include?.cards !== false,
+    charts: presentation?.include?.charts !== false,
+    table: presentation?.include?.table !== false,
+  };
+
+  if (include.cards) {
+    Dashboard.renderSavedCards(container, snapshot.cards || []);
+  }
+  if (include.charts) {
+    (snapshot.charts || []).forEach((chartData, index) => {
+      Dashboard.renderSavedChart(container, chartData, index, presentation);
+    });
+  }
+  if (include.table) {
+    (snapshot.tables || []).forEach((tableData) => {
+      Dashboard.renderSavedTable(container, tableData);
+    });
+  }
 };
 
 Dashboard.renderSavedPublishedSection = async function (section) {
   const content = document.getElementById("content");
   Dashboard.showLoading(content);
   const role = Dashboard.getRole();
+  if (Dashboard.destroyCommentEditors) Dashboard.destroyCommentEditors();
 
   try {
     const latest = await Dashboard.apiFetch(`/api/reports/latest/${section}`);
@@ -167,8 +182,14 @@ Dashboard.renderSavedPublishedSection = async function (section) {
     `;
 
     const blocksContainer = document.getElementById("saved-report-blocks");
-    Dashboard.renderSavedSnapshot(blocksContainer, report.report_json?.snapshot || null);
-    Dashboard.renderSavedComments(blocksContainer, report.report_json);
+    const snapshot = report.report_json?.snapshot || null;
+    if (snapshot && report.report_json?.presentation && !snapshot.presentation) {
+      snapshot.presentation = report.report_json.presentation;
+    }
+    Dashboard.renderSavedSnapshot(blocksContainer, snapshot);
+    if (report.report_json?.presentation?.include?.comments !== false) {
+      Dashboard.renderSavedComments(blocksContainer, report.report_json);
+    }
 
     const downloadBtn = document.getElementById("download-saved-pdf-btn");
     downloadBtn.addEventListener("click", async () => {

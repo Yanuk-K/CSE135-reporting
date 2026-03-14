@@ -5,6 +5,7 @@ const { proj } = require("../db");
 const { createExportPdf } = require("../services/exportService");
 
 const allowedSections = new Set(["overview", "sessions", "performance", "errors"]);
+const allowedCategories = new Set(["traffic", "behavior", "performance"]);
 const exportsDir = path.join(__dirname, "..", "exports");
 
 function parseStoredJson(value) {
@@ -41,6 +42,20 @@ function canReadReport(role, userId, row) {
   return false;
 }
 
+function validateReportPayload(sectionKey, category, reportJson) {
+  if (!allowedCategories.has(String(category || ""))) {
+    return "invalid category";
+  }
+  if (reportJson == null || typeof reportJson !== "object") {
+    return "invalid report_json";
+  }
+  const snapshotSection = reportJson?.snapshot?.section;
+  if (snapshotSection && snapshotSection !== sectionKey) {
+    return "snapshot section does not match section_key";
+  }
+  return null;
+}
+
 async function createSavedReportPdf(report, screenshots) {
   const body = parseStoredJson(report?.report_json) || {};
   const start = body?.range?.start || "n/a";
@@ -75,6 +90,10 @@ function createReportsRouter({ requireAuth }) {
       }
       if (!allowedSections.has(section_key)) {
         return res.status(400).json({ success: false, error: "invalid section" });
+      }
+      const reportValidationError = validateReportPayload(section_key, category, report_json);
+      if (reportValidationError) {
+        return res.status(400).json({ success: false, error: reportValidationError });
       }
 
       if (role === "admin") {
@@ -144,6 +163,10 @@ function createReportsRouter({ requireAuth }) {
       }
       if (!allowedSections.has(nextSection)) {
         return res.status(400).json({ success: false, error: "invalid section" });
+      }
+      const reportValidationError = validateReportPayload(nextSection, nextCategory, nextReportJson);
+      if (reportValidationError) {
+        return res.status(400).json({ success: false, error: reportValidationError });
       }
 
       if (role === "admin") {

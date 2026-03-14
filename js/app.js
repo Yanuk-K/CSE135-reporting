@@ -2,6 +2,57 @@ window.Dashboard = window.Dashboard || {};
 
 Dashboard.viewModeBySection = Dashboard.viewModeBySection || {};
 Dashboard.currentSectionData = Dashboard.currentSectionData || {};
+Dashboard.reportBuilderState = Dashboard.reportBuilderState || {};
+
+Dashboard.defaultPresentationBySection = {
+  overview: {
+    category: "traffic",
+    include: { cards: true, charts: true, table: true, comments: true },
+    chartTypes: { "overview-trend": "line", "overview-top-pages": "bar" },
+  },
+  sessions: {
+    category: "behavior",
+    include: { cards: true, charts: true, table: true, comments: true },
+    chartTypes: {
+      "sessions-trend": "line",
+      "sessions-depth": "bar",
+      "sessions-bounce": "doughnut",
+    },
+  },
+  performance: {
+    category: "performance",
+    include: { cards: true, charts: true, table: true, comments: true },
+    chartTypes: { "perf-percentiles": "bar", "perf-radar": "radar" },
+  },
+  errors: {
+    category: "performance",
+    include: { cards: true, charts: true, table: true, comments: true },
+    chartTypes: { "errors-trend": "line", "errors-top": "bar" },
+  },
+};
+
+Dashboard.cloneObject = function (value) {
+  return JSON.parse(JSON.stringify(value));
+};
+
+Dashboard.getReportPresentation = function (section) {
+  if (!section || !Dashboard.defaultPresentationBySection[section]) {
+    return {
+      category: "performance",
+      include: { cards: true, charts: true, table: true, comments: true },
+      chartTypes: {},
+    };
+  }
+  if (!Dashboard.reportBuilderState[section]) {
+    Dashboard.reportBuilderState[section] = Dashboard.cloneObject(Dashboard.defaultPresentationBySection[section]);
+  }
+  return Dashboard.reportBuilderState[section];
+};
+
+Dashboard.updateReportPresentation = function (section, updater) {
+  const current = Dashboard.getReportPresentation(section);
+  updater(current);
+};
 
 Dashboard.getRole = function () {
   return sessionStorage.getItem("role") || "viewer";
@@ -59,14 +110,17 @@ Dashboard.setHeaderState = function (state, isAuthenticated) {
   const canSave = isAuthenticated && Dashboard.canSaveReport(state.route);
   const canToggleViewMode = isAuthenticated && Dashboard.canToggleViewMode(state.route);
   const viewModeBtn = document.getElementById("view-mode-btn");
+  const exportBtn = document.getElementById("export-btn");
   document.getElementById("start-date").value = state.start;
   document.getElementById("end-date").value = state.end;
   document.getElementById("date-controls").classList.toggle("hidden", isLogin);
   document.getElementById("logout-btn").classList.toggle("hidden", !isAuthenticated);
   document.getElementById("user-label").textContent =
     isLogin ? "Guest" : (sessionStorage.getItem("display_name") || "User");
-  document.getElementById("export-btn").classList.toggle("hidden", !canExport);
-  document.getElementById("export-btn").disabled = !canExport;
+  if (exportBtn) {
+    exportBtn.classList.toggle("hidden", !canExport);
+    exportBtn.disabled = !canExport;
+  }
   document.getElementById("save-report-btn").classList.toggle("hidden", !canSave);
   document.getElementById("save-report-btn").disabled = !canSave;
   viewModeBtn.classList.toggle("hidden", !canToggleViewMode);
@@ -103,7 +157,7 @@ Dashboard.buildReportDocument = function (state) {
       id: `block-${index + 1}`,
       type,
       title: titleEl ? titleEl.textContent.trim() : `Block ${index + 1}`,
-      comment: comment ? (comment.tagName === "TEXTAREA" ? comment.value.trim() : comment.textContent.trim()) : "",
+      comment: Dashboard.getCommentValue ? Dashboard.getCommentValue(comment) : (comment ? comment.textContent.trim() : ""),
       html: panel.innerHTML,
     };
   });
@@ -126,12 +180,7 @@ Dashboard.saveCurrentReport = async function () {
 
   try {
     const section = state.route.replace("/", "") || "overview";
-    const categoryBySection = {
-      overview: "traffic",
-      sessions: "behavior",
-      performance: "performance",
-      errors: "reliability",
-    };
+    const presentation = Dashboard.getReportPresentation(section);
     const title = `${section.toUpperCase()} ${state.start} to ${state.end}`;
     const screenshots = await Dashboard.collectExportScreenshots(state.route);
     if (!screenshots.length) {
@@ -148,13 +197,14 @@ Dashboard.saveCurrentReport = async function () {
       range: { start: state.start, end: state.end },
       saved_at: new Date().toISOString(),
     };
+    reportJson.presentation = Dashboard.cloneObject(presentation);
 
     await Dashboard.apiFetch("/api/reports", {
       method: "POST",
       body: JSON.stringify({
         title,
         section_key: section,
-        category: categoryBySection[section] || section,
+        category: presentation.category || "performance",
         report_json: reportJson,
         screenshot_images: screenshots,
         is_published: true,
@@ -301,7 +351,10 @@ document.getElementById("apply-dates").addEventListener("click", () => {
 });
 
 document.getElementById("logout-btn").addEventListener("click", Dashboard.logout);
-document.getElementById("export-btn").addEventListener("click", Dashboard.exportCurrentReport);
+const exportBtn = document.getElementById("export-btn");
+if (exportBtn) {
+  exportBtn.addEventListener("click", Dashboard.exportCurrentReport);
+}
 document.getElementById("save-report-btn").addEventListener("click", Dashboard.saveCurrentReport);
 document.getElementById("view-mode-btn").addEventListener("click", Dashboard.toggleCurrentViewMode);
 document.getElementById("menu-btn").addEventListener("click", () => {
