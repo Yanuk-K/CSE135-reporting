@@ -80,9 +80,25 @@ async function createExportPdf(route, start, end, screenshots = []) {
   doc.font("Helvetica").fontSize(11).text(`Range: ${start} to ${end}`);
   doc.moveDown();
 
-  const rendered = renderScreenshotAcrossPages(doc, screenshots[0]);
-  if (!rendered) {
+  if (!Array.isArray(screenshots) || !screenshots.length) {
     doc.font("Helvetica").fontSize(11).text("No dashboard screenshot was available for this export.");
+  } else {
+    screenshots.forEach((screenshot, index) => {
+      if (index > 0) {
+        doc.addPage();
+      }
+
+      const label = String(screenshot?.label || "").trim();
+      if (label) {
+        doc.font("Helvetica-Bold").fontSize(12).text(label);
+        doc.moveDown(0.3);
+      }
+
+      const rendered = renderScreenshotAcrossPages(doc, screenshot);
+      if (!rendered) {
+        doc.font("Helvetica").fontSize(11).text("This section could not be rendered.");
+      }
+    });
   }
   doc.end();
 

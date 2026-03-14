@@ -329,38 +329,63 @@ Dashboard.saveCurrentReport = async function () {
 Dashboard.captureElementImage = async function (element, label) {
   if (!element || !window.html2canvas) return null;
 
-  const canvas = await window.html2canvas(element, {
-    backgroundColor: "#ffffff",
-    scale: 1.5,
-    useCORS: true,
-    logging: false,
-    onclone: (clonedDoc) => {
-      const clonedTarget = clonedDoc.getElementById(element.id);
-      if (!clonedTarget) return;
-      clonedTarget.style.width = "720px";
-      clonedTarget.style.maxWidth = "720px";
-      clonedTarget.style.margin = "0 auto";
-      clonedTarget.classList.add("export-capture");
-      clonedTarget.querySelectorAll(".report-builder-panel").forEach((node) => {
-        node.remove();
-      });
-    },
-  });
+  const captureId = `export-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  element.setAttribute("data-export-capture-id", captureId);
+
+  let canvas;
+  try {
+    canvas = await window.html2canvas(element, {
+      backgroundColor: "#ffffff",
+      scale: 1.5,
+      useCORS: true,
+      logging: false,
+      onclone: (clonedDoc) => {
+        const clonedTarget = clonedDoc.querySelector(`[data-export-capture-id="${captureId}"]`);
+        if (!clonedTarget) return;
+        clonedTarget.style.width = "720px";
+        clonedTarget.style.maxWidth = "720px";
+        clonedTarget.style.margin = "0 auto";
+        clonedTarget.classList.add("export-capture");
+        clonedTarget.querySelectorAll(".report-builder-panel").forEach((node) => {
+          node.remove();
+        });
+      },
+    });
+  } finally {
+    element.removeAttribute("data-export-capture-id");
+  }
 
   return {
     label,
-    data_url: canvas.toDataURL("image/jpeg", 0.72),
+    data_url: canvas.toDataURL("image/png"),
   };
 };
 
 Dashboard.collectExportScreenshots = async function (route) {
   const content = document.getElementById("content");
   if (!content) return [];
-  const screenshot = await Dashboard.captureElementImage(
+
+  const panels = Array.from(content.querySelectorAll(".panel")).filter((panel) => {
+    if (panel.classList.contains("hidden")) return false;
+    const style = window.getComputedStyle(panel);
+    return style.display !== "none" && style.visibility !== "hidden";
+  });
+
+  const screenshots = [];
+  for (let i = 0; i < panels.length; i += 1) {
+    const panel = panels[i];
+    const title = panel.querySelector("h2, h3, h4")?.textContent?.trim() || `Panel ${i + 1}`;
+    const shot = await Dashboard.captureElementImage(panel, title);
+    if (shot) screenshots.push(shot);
+  }
+
+  if (screenshots.length) return screenshots;
+
+  const fallback = await Dashboard.captureElementImage(
     content,
     `${route.replace("/", "").toUpperCase() || "REPORT"} Dashboard`
   );
-  return screenshot ? [screenshot] : [];
+  return fallback ? [fallback] : [];
 };
 
 Dashboard.exportCurrentReport = async function () {

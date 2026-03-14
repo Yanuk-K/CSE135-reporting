@@ -196,6 +196,14 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
   margin-bottom: 16px;
 }
 
+.export-capture table {
+  font-size: 13px;
+}
+
+.export-capture .metric-value {
+  font-size: 1.25rem;
+}
+
 .status-msg { min-height: 1.2em; }
 
 .login-wrap {
