@@ -20,6 +20,22 @@ Dashboard.getPaletteColor = function (index) {
   return palette[((index % palette.length) + palette.length) % palette.length];
 };
 
+Dashboard.getSpreadPalette = function (count) {
+  const total = Number(count || 0);
+  if (total <= 0) return [];
+  if (total === 1) return [Dashboard.getPaletteColor(0)];
+
+  const paletteSize = Dashboard.chartPalette.length;
+  if (total <= paletteSize) {
+    return Array.from({ length: total }, (_, i) => {
+      const idx = Math.round((i * (paletteSize - 1)) / (total - 1));
+      return Dashboard.getPaletteColor(idx);
+    });
+  }
+
+  return Array.from({ length: total }, (_, i) => Dashboard.getPaletteColor(i));
+};
+
 Dashboard.defaultPresentationBySection = {
   overview: {
     include: { cards: true, charts: true, table: true, comments: true },
@@ -101,21 +117,29 @@ Dashboard.renderManagedChart = function (canvas, config, key) {
 
   const chartType = String(mergedConfig.type || "line").toLowerCase();
   if (mergedConfig.data && Array.isArray(mergedConfig.data.datasets)) {
+    const datasetCount = mergedConfig.data.datasets.length;
+    const datasetColors = Dashboard.getSpreadPalette(datasetCount);
     mergedConfig.data.datasets = mergedConfig.data.datasets.map((dataset, index) => {
       const next = { ...dataset };
+      const datasetColor = datasetColors[index] || Dashboard.getPaletteColor(index);
+      const pointCount = Array.isArray(next.data) ? next.data.length : 0;
+      const pointColors = Dashboard.getSpreadPalette(pointCount);
+      const usePointPalette = chartType === "bar" && datasetCount === 1 && pointCount > 1;
+
       if (next.backgroundColor == null) {
         if (["doughnut", "pie", "polararea"].includes(chartType)) {
-          const count = Array.isArray(next.data) ? next.data.length : Dashboard.chartPalette.length;
-          next.backgroundColor = Array.from({ length: count }, (_, i) => Dashboard.getPaletteColor(i));
+          next.backgroundColor = pointColors;
+        } else if (usePointPalette) {
+          next.backgroundColor = pointColors;
         } else {
-          next.backgroundColor = Dashboard.getPaletteColor(index);
+          next.backgroundColor = datasetColor;
         }
       }
       if (next.borderColor == null) {
-        next.borderColor = Dashboard.getPaletteColor(index);
+        next.borderColor = usePointPalette ? pointColors : datasetColor;
       }
       if (next.pointBackgroundColor == null) {
-        next.pointBackgroundColor = Dashboard.getPaletteColor(index);
+        next.pointBackgroundColor = datasetColor;
       }
       return next;
     });
@@ -307,12 +331,15 @@ Dashboard.captureElementImage = async function (element, label) {
 
   const canvas = await window.html2canvas(element, {
     backgroundColor: "#ffffff",
-    scale: 2,
+    scale: 1.5,
     useCORS: true,
     logging: false,
     onclone: (clonedDoc) => {
       const clonedTarget = clonedDoc.getElementById(element.id);
       if (!clonedTarget) return;
+      clonedTarget.style.width = "720px";
+      clonedTarget.style.maxWidth = "720px";
+      clonedTarget.style.margin = "0 auto";
       clonedTarget.classList.add("export-capture");
       clonedTarget.querySelectorAll(".report-builder-panel").forEach((node) => {
         node.remove();

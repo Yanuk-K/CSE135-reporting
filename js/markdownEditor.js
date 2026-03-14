@@ -20,22 +20,11 @@ Dashboard.initCommentEditors = function () {
     if (!input.id || Dashboard.commentEditors.has(input.id)) return;
     const editor = new EasyMDE({
       element: input,
+      autoDownloadFontAwesome: false,
       spellChecker: false,
       status: false,
+      toolbar: false,
       minHeight: "120px",
-      toolbar: [
-        "bold",
-        "italic",
-        "heading",
-        "|",
-        "quote",
-        "unordered-list",
-        "ordered-list",
-        "|",
-        "link",
-        "preview",
-        "guide",
-      ],
     });
     Dashboard.commentEditors.set(input.id, editor);
   });

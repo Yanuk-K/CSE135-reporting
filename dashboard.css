@@ -192,6 +192,10 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
   height: 300px;
 }
 
+.export-capture .panel {
+  margin-bottom: 16px;
+}
+
 .status-msg { min-height: 1.2em; }
 
 .login-wrap {
