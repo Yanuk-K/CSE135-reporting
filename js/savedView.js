@@ -99,7 +99,7 @@ Dashboard.renderSavedChart = function (container, chartData, index, presentation
   const palette = ["#2E86C1", "#60a5fa", "#94a3b8", "#64748b"];
   const preferredType = presentation?.chartTypes?.[chartData.id] || chartData.type;
   const chartType = ["line", "bar", "doughnut", "radar"].includes(preferredType) ? preferredType : "line";
-  new Chart(canvas, {
+  Dashboard.renderManagedChart(canvas, {
     type: chartType,
     data: {
       labels: chartData.labels,
@@ -114,13 +114,11 @@ Dashboard.renderSavedChart = function (container, chartData, index, presentation
       })),
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       plugins: {
         legend: { position: "bottom" },
       },
     },
-  });
+  }, `saved-${chartData.id || index}`);
 };
 
 Dashboard.renderSavedSnapshot = function (container, snapshot) {

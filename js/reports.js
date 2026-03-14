@@ -174,7 +174,7 @@ Dashboard.renderSessions = async function (start, end) {
         width: "100%",
       });
 
-      new Chart(document.getElementById("sessionDepthChart"), {
+      Dashboard.renderManagedChart(document.getElementById("sessionDepthChart"), {
         type: presentation.chartTypes["sessions-depth"] || "bar",
         data: {
           labels: depth.map((d) => d.bucket),
@@ -186,10 +186,10 @@ Dashboard.renderSessions = async function (start, end) {
             borderWidth: 1,
           }],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
-      });
+        options: { plugins: { legend: { display: false } } },
+      }, "sessionDepthChart");
 
-      new Chart(document.getElementById("sessionBounceChart"), {
+      Dashboard.renderManagedChart(document.getElementById("sessionBounceChart"), {
         type: presentation.chartTypes["sessions-bounce"] || "doughnut",
         data: {
           labels: ["Bounce", "Engaged"],
@@ -199,8 +199,8 @@ Dashboard.renderSessions = async function (start, end) {
             backgroundColor: ["#ef4444", "#22c55e"],
           }],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
-      });
+        options: { plugins: { legend: { position: "bottom" } } },
+      }, "sessionBounceChart");
     }
 
     if (presentation.include.table) {
@@ -347,7 +347,7 @@ Dashboard.renderPerformance = async function (start, end) {
     };
 
     if (presentation.include.charts) {
-      new Chart(document.getElementById("perf-chart"), {
+      Dashboard.renderManagedChart(document.getElementById("perf-chart"), {
         type: presentation.chartTypes["perf-percentiles"] || "bar",
         data: {
           labels: ["LCP", "CLS", "INP", "LOAD_TIME"],
@@ -357,10 +357,10 @@ Dashboard.renderPerformance = async function (start, end) {
             { label: "p95", data: [perf.lcp?.p95 || 0, perf.cls?.p95 || 0, perf.inp?.p95 || 0, perf.load_time?.p95 || 0], backgroundColor: "#64748b" },
           ],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
-      });
+        options: { plugins: { legend: { position: "bottom" } } },
+      }, "perf-chart");
 
-      new Chart(document.getElementById("perf-radar-chart"), {
+      Dashboard.renderManagedChart(document.getElementById("perf-radar-chart"), {
         type: presentation.chartTypes["perf-radar"] || "radar",
         data: {
           labels: ["LCP", "CLS", "INP", "LOAD_TIME"],
@@ -374,8 +374,7 @@ Dashboard.renderPerformance = async function (start, end) {
             },
           ],
         },
-        options: { responsive: true, maintainAspectRatio: false },
-      });
+      }, "perf-radar-chart");
     }
 
     if (presentation.include.table) {
@@ -556,7 +555,7 @@ Dashboard.renderErrors = async function (start, end) {
         width: "100%",
       });
 
-      new Chart(document.getElementById("errorTopChart"), {
+      Dashboard.renderManagedChart(document.getElementById("errorTopChart"), {
         type: presentation.chartTypes["errors-top"] || "bar",
         data: {
           labels: byMessage.slice(0, 8).map((row) => row.error_message || "Unknown"),
@@ -566,8 +565,8 @@ Dashboard.renderErrors = async function (start, end) {
             backgroundColor: ["#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6"],
           }],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
-      });
+        options: { plugins: { legend: { position: "bottom" } } },
+      }, "errorTopChart");
     }
 
     if (presentation.include.table) {

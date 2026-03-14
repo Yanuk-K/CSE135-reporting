@@ -3,6 +3,7 @@ window.Dashboard = window.Dashboard || {};
 Dashboard.viewModeBySection = Dashboard.viewModeBySection || {};
 Dashboard.currentSectionData = Dashboard.currentSectionData || {};
 Dashboard.reportBuilderState = Dashboard.reportBuilderState || {};
+Dashboard.chartInstances = Dashboard.chartInstances || new Map();
 
 Dashboard.defaultPresentationBySection = {
   overview: {
@@ -56,6 +57,36 @@ Dashboard.bindPresentationControl = function (section, id, applyChange) {
     Dashboard.updateReportPresentation(section, applyChange.bind(null, el));
     Dashboard.route();
   });
+};
+
+Dashboard.destroyManagedCharts = function () {
+  Dashboard.chartInstances.forEach((chart) => {
+    if (chart && typeof chart.destroy === "function") chart.destroy();
+  });
+  Dashboard.chartInstances.clear();
+};
+
+Dashboard.renderManagedChart = function (canvas, config, key) {
+  if (!canvas || typeof Chart === "undefined") return null;
+  const chartKey = key || canvas.id;
+  if (chartKey && Dashboard.chartInstances.has(chartKey)) {
+    const existing = Dashboard.chartInstances.get(chartKey);
+    if (existing && typeof existing.destroy === "function") existing.destroy();
+    Dashboard.chartInstances.delete(chartKey);
+  }
+
+  const mergedConfig = {
+    ...config,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      ...(config.options || {}),
+    },
+  };
+
+  const chart = new Chart(canvas, mergedConfig);
+  if (chartKey) Dashboard.chartInstances.set(chartKey, chart);
+  return chart;
 };
 
 Dashboard.getRole = function () {
@@ -291,6 +322,7 @@ Dashboard.exportCurrentReport = async function () {
 
 Dashboard.route = async function () {
   const state = Dashboard.parseHash(window.location.hash || "#/overview");
+  Dashboard.destroyManagedCharts();
   const isAuthenticated = await Dashboard.getAuthState(state);
   Dashboard.setAuthUI(isAuthenticated);
   Dashboard.setHeaderState(state, isAuthenticated);

@@ -148,7 +148,7 @@ Dashboard.renderOverview = async function () {
     if (presentation.include.charts) {
       const trendCanvas = document.getElementById("overview-trend-chart");
       if (trendCanvas) {
-        new Chart(trendCanvas, {
+        Dashboard.renderManagedChart(trendCanvas, {
           type: presentation.chartTypes["overview-trend"] || "line",
           data: {
             labels: byDay.map((d) => String(d.date || "").slice(0, 10)),
@@ -161,13 +161,13 @@ Dashboard.renderOverview = async function () {
               tension: 0.2,
             }],
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
-        });
+          options: { plugins: { legend: { position: "bottom" } } },
+        }, "overview-trend-chart");
       }
 
       const topCanvas = document.getElementById("overview-top-chart");
       if (topCanvas) {
-        new Chart(topCanvas, {
+        Dashboard.renderManagedChart(topCanvas, {
           type: presentation.chartTypes["overview-top-pages"] || "bar",
           data: {
             labels: topPages.slice(0, 8).map((row) => row.url || ""),
@@ -177,8 +177,8 @@ Dashboard.renderOverview = async function () {
               backgroundColor: ["#2E86C1", "#60a5fa", "#94a3b8", "#64748b", "#93c5fd", "#cbd5e1", "#1d4ed8", "#334155"],
             }],
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
-        });
+          options: { plugins: { legend: { position: "bottom" } } },
+        }, "overview-top-chart");
       }
     }
 
