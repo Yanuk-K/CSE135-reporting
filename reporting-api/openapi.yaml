@@ -195,6 +195,167 @@ paths:
           description: OK
         "401":
           description: Authentication required
+  /api/reports:
+    get:
+      summary: List saved reports for current role
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Authentication required
+    post:
+      summary: Create saved report and generate PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportSaveRequest"
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+  /api/reports/latest/{section_key}:
+    get:
+      summary: Get latest published report for section
+      parameters:
+        - name: section_key
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [overview, sessions, performance, errors]
+      responses:
+        "200":
+          description: OK (data may be null)
+        "400":
+          description: Invalid section
+        "401":
+          description: Authentication required
+  /api/reports/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      summary: Get one saved report by ID
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Report not found
+    put:
+      summary: Update saved report and regenerate PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportSaveRequest"
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Report not found
+  /api/reports/{id}/publish:
+    post:
+      summary: Publish or unpublish a saved report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_published:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Report not found
+  /api/reports/{id}/pdf:
+    get:
+      summary: Get downloadable PDF URL for a saved report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: Report not found
+  /api/users/{id}/sections:
+    put:
+      summary: Assign analyst section access (owner only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sections]
+              properties:
+                sections:
+                  type: array
+                  items:
+                    type: string
+                    enum: [overview, sessions, performance, errors]
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "403":
+          description: Insufficient permissions
+        "404":
+          description: User not found
 components:
   parameters:
     StartDate:
@@ -239,6 +400,32 @@ components:
         maximum: 100
         default: 20
   schemas:
+    ReportSaveRequest:
+      type: object
+      required: [title, section_key, category, report_json, screenshot_images]
+      properties:
+        title:
+          type: string
+        section_key:
+          type: string
+          enum: [overview, sessions, performance, errors]
+        category:
+          type: string
+          enum: [traffic, behavior, performance]
+        report_json:
+          type: object
+          additionalProperties: true
+        screenshot_images:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              data_url:
+                type: string
+        is_published:
+          type: boolean
     StaticInput:
       type: object
       properties:
