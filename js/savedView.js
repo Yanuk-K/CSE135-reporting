@@ -90,10 +90,13 @@ Dashboard.renderSavedChart = function (container, chartData, index, presentation
   panel.className = "panel";
   const title = document.createElement("h3");
   title.textContent = chartData.title || chartData.id || `Chart ${index + 1}`;
+  const wrap = document.createElement("div");
+  wrap.className = "chart-wrap";
   const canvas = document.createElement("canvas");
   canvas.className = "chart-canvas";
   panel.appendChild(title);
-  panel.appendChild(canvas);
+  wrap.appendChild(canvas);
+  panel.appendChild(wrap);
   container.appendChild(panel);
 
   const palette = ["#2E86C1", "#60a5fa", "#94a3b8", "#64748b"];

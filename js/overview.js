@@ -73,8 +73,8 @@ Dashboard.renderOverview = async function () {
   content.innerHTML = `
     ${builderHtml}
     ${presentation.include.cards ? '<div id="cards" class="cards-grid"></div>' : ""}
-    ${presentation.include.charts ? '<section class="panel"><h3>Daily Pageviews Trend</h3><canvas id="overview-trend-chart" class="chart-canvas"></canvas></section>' : ""}
-    ${presentation.include.charts ? '<section class="panel"><h3>Top Pages Distribution</h3><canvas id="overview-top-chart" class="chart-canvas"></canvas></section>' : ""}
+    ${presentation.include.charts ? '<section class="panel"><h3>Daily Pageviews Trend</h3><div class="chart-wrap"><canvas id="overview-trend-chart" class="chart-canvas"></canvas></div></section>' : ""}
+    ${presentation.include.charts ? '<section class="panel"><h3>Top Pages Distribution</h3><div class="chart-wrap"><canvas id="overview-top-chart" class="chart-canvas"></canvas></div></section>' : ""}
     ${presentation.include.table ? '<section class="panel"><h3>Top Pages Table</h3><div id="top-pages"></div></section>' : ""}
     ${presentation.include.comments ? '<section class="panel analyst-comment"><h3>Analyst Comment</h3><div id="overview-comment-body"></div></section>' : ""}
   `;

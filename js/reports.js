@@ -144,12 +144,12 @@ Dashboard.renderSessions = async function (start, end) {
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Session Depth</h3>
-        <canvas id="sessionDepthChart" class="chart-canvas"></canvas>
+        <div class="chart-wrap"><canvas id="sessionDepthChart" class="chart-canvas"></canvas></div>
       </section>
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Bounce vs Engaged</h3>
-        <canvas id="sessionBounceChart" class="chart-canvas"></canvas>
+        <div class="chart-wrap"><canvas id="sessionBounceChart" class="chart-canvas"></canvas></div>
       </section>
 
       <section class="panel ${presentation.include.table ? "" : "hidden"}">
@@ -285,12 +285,12 @@ Dashboard.renderPerformance = async function (start, end) {
       ${builderHtml}
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h2>Performance</h2>
-        <canvas id="perf-chart" class="chart-canvas"></canvas>
+        <div class="chart-wrap"><canvas id="perf-chart" class="chart-canvas"></canvas></div>
       </section>
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>p75 Comparison</h3>
-        <canvas id="perf-radar-chart" class="chart-canvas"></canvas>
+        <div class="chart-wrap"><canvas id="perf-radar-chart" class="chart-canvas"></canvas></div>
       </section>
 
       <section class="panel ${presentation.include.table ? "" : "hidden"}">
@@ -521,7 +521,7 @@ Dashboard.renderErrors = async function (start, end) {
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Top Error Messages</h3>
-        <canvas id="errorTopChart" class="chart-canvas"></canvas>
+        <div class="chart-wrap"><canvas id="errorTopChart" class="chart-canvas"></canvas></div>
       </section>
 
       <section class="panel ${presentation.include.table ? "" : "hidden"}">

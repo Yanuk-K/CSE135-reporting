@@ -128,7 +128,17 @@ body {
 
 .metric-label { color: var(--site-muted); font-size: 0.9rem; }
 .metric-value { margin-top: 6px; font-size: 1.1rem; font-weight: 700; }
-.chart-canvas { width: 100%; display: block; height: 200px; }
+.chart-wrap {
+  position: relative;
+  height: 200px;
+  width: 100%;
+}
+
+.chart-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
 .report-builder-toggles {
   margin-top: 8px;
   display: flex;
@@ -250,6 +260,6 @@ button:disabled { cursor: wait; opacity: 0.7; }
   .summary-cards, .cards-grid, .skeleton-cards { grid-template-columns: 1fr; }
   .admin-form { grid-template-columns: 1fr; }
   .report-builder-form { grid-template-columns: 1fr; }
-  .chart-canvas { height: 160px; }
+  .chart-wrap { height: 160px; }
   .report-builder-toggles { gap: 8px; }
 }
