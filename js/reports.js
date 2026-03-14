@@ -40,15 +40,7 @@ Dashboard.renderSessions = async function (start, end) {
       ? `
         <section class="panel">
           <h3>Report Builder</h3>
-          <p>Category guide: Traffic = acquisition trends, Behavior = engagement patterns, Performance = technical quality signals.</p>
-          <div class="admin-form">
-            <label>Category
-              <select id="sessions-category">
-                <option value="traffic" ${presentation.category === "traffic" ? "selected" : ""}>Traffic</option>
-                <option value="behavior" ${presentation.category === "behavior" ? "selected" : ""}>Behavior</option>
-                <option value="performance" ${presentation.category === "performance" ? "selected" : ""}>Performance</option>
-              </select>
-            </label>
+          <div class="report-builder-form">
             <label>Trend Chart
               <select id="sessions-trend-type">
                 <option value="line" ${presentation.chartTypes["sessions-trend"] === "line" ? "selected" : ""}>Line</option>
@@ -68,7 +60,7 @@ Dashboard.renderSessions = async function (start, end) {
               </select>
             </label>
           </div>
-          <div class="user-controls" style="margin-top:8px;">
+          <div class="report-builder-toggles">
             <label><input type="checkbox" id="sessions-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
             <label><input type="checkbox" id="sessions-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
             <label><input type="checkbox" id="sessions-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
@@ -147,17 +139,17 @@ Dashboard.renderSessions = async function (start, end) {
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Sessions per Day</h3>
-        <div id="sessionTrendChart" style="height:300px;width:100%;"></div>
+        <div id="sessionTrendChart" style="height:220px;width:100%;"></div>
       </section>
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Session Depth</h3>
-        <canvas id="sessionDepthChart"></canvas>
+        <canvas id="sessionDepthChart" class="chart-canvas"></canvas>
       </section>
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Bounce vs Engaged</h3>
-        <canvas id="sessionBounceChart"></canvas>
+        <canvas id="sessionBounceChart" class="chart-canvas"></canvas>
       </section>
 
       <section class="panel ${presentation.include.table ? "" : "hidden"}">
@@ -178,7 +170,7 @@ Dashboard.renderSessions = async function (start, end) {
           scaleX: { labels: trend.map((d) => new Date(d.date).toLocaleDateString()) },
           series: [{ values: trend.map((d) => Number(d.sessions || 0)), lineColor: "#2E86C1" }],
         },
-        height: 300,
+        height: 220,
         width: "100%",
       });
 
@@ -194,7 +186,7 @@ Dashboard.renderSessions = async function (start, end) {
             borderWidth: 1,
           }],
         },
-        options: { plugins: { legend: { display: false } } },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
       });
 
       new Chart(document.getElementById("sessionBounceChart"), {
@@ -207,7 +199,7 @@ Dashboard.renderSessions = async function (start, end) {
             backgroundColor: ["#ef4444", "#22c55e"],
           }],
         },
-        options: { plugins: { legend: { position: "bottom" } } },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
       });
     }
 
@@ -235,23 +227,13 @@ Dashboard.renderSessions = async function (start, end) {
     }
 
     if (canEditComments) {
-      const bindRerender = (id, applyChange) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener("change", () => {
-          Dashboard.updateReportPresentation("sessions", applyChange.bind(null, el));
-          Dashboard.route();
-        });
-      };
-
-      bindRerender("sessions-category", (el, state) => { state.category = el.value; });
-      bindRerender("sessions-trend-type", (el, state) => { state.chartTypes["sessions-trend"] = el.value; });
-      bindRerender("sessions-depth-type", (el, state) => { state.chartTypes["sessions-depth"] = el.value; });
-      bindRerender("sessions-bounce-type", (el, state) => { state.chartTypes["sessions-bounce"] = el.value; });
-      bindRerender("sessions-inc-cards", (el, state) => { state.include.cards = el.checked; });
-      bindRerender("sessions-inc-charts", (el, state) => { state.include.charts = el.checked; });
-      bindRerender("sessions-inc-table", (el, state) => { state.include.table = el.checked; });
-      bindRerender("sessions-inc-comments", (el, state) => { state.include.comments = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-trend-type", (el, state) => { state.chartTypes["sessions-trend"] = el.value; });
+      Dashboard.bindPresentationControl("sessions", "sessions-depth-type", (el, state) => { state.chartTypes["sessions-depth"] = el.value; });
+      Dashboard.bindPresentationControl("sessions", "sessions-bounce-type", (el, state) => { state.chartTypes["sessions-bounce"] = el.value; });
+      Dashboard.bindPresentationControl("sessions", "sessions-inc-cards", (el, state) => { state.include.cards = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-inc-charts", (el, state) => { state.include.charts = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-inc-table", (el, state) => { state.include.table = el.checked; });
+      Dashboard.bindPresentationControl("sessions", "sessions-inc-comments", (el, state) => { state.include.comments = el.checked; });
     }
 
     if (Dashboard.destroyCommentEditors) Dashboard.destroyCommentEditors();
@@ -275,15 +257,7 @@ Dashboard.renderPerformance = async function (start, end) {
       ? `
         <section class="panel">
           <h3>Report Builder</h3>
-          <p>Category guide: Traffic = acquisition trends, Behavior = engagement patterns, Performance = technical quality signals.</p>
-          <div class="admin-form">
-            <label>Category
-              <select id="performance-category">
-                <option value="traffic" ${presentation.category === "traffic" ? "selected" : ""}>Traffic</option>
-                <option value="behavior" ${presentation.category === "behavior" ? "selected" : ""}>Behavior</option>
-                <option value="performance" ${presentation.category === "performance" ? "selected" : ""}>Performance</option>
-              </select>
-            </label>
+          <div class="report-builder-form">
             <label>Percentiles Chart
               <select id="perf-percentiles-type">
                 <option value="bar" ${presentation.chartTypes["perf-percentiles"] === "bar" ? "selected" : ""}>Bar</option>
@@ -297,7 +271,7 @@ Dashboard.renderPerformance = async function (start, end) {
               </select>
             </label>
           </div>
-          <div class="user-controls" style="margin-top:8px;">
+          <div class="report-builder-toggles">
             <label><input type="checkbox" id="performance-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
             <label><input type="checkbox" id="performance-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
             <label><input type="checkbox" id="performance-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
@@ -311,12 +285,12 @@ Dashboard.renderPerformance = async function (start, end) {
       ${builderHtml}
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h2>Performance</h2>
-        <canvas id="perf-chart"></canvas>
+        <canvas id="perf-chart" class="chart-canvas"></canvas>
       </section>
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>p75 Comparison</h3>
-        <canvas id="perf-radar-chart"></canvas>
+        <canvas id="perf-radar-chart" class="chart-canvas"></canvas>
       </section>
 
       <section class="panel ${presentation.include.table ? "" : "hidden"}">
@@ -383,7 +357,7 @@ Dashboard.renderPerformance = async function (start, end) {
             { label: "p95", data: [perf.lcp?.p95 || 0, perf.cls?.p95 || 0, perf.inp?.p95 || 0, perf.load_time?.p95 || 0], backgroundColor: "#64748b" },
           ],
         },
-        options: { plugins: { legend: { position: "bottom" } } },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
       });
 
       new Chart(document.getElementById("perf-radar-chart"), {
@@ -400,6 +374,7 @@ Dashboard.renderPerformance = async function (start, end) {
             },
           ],
         },
+        options: { responsive: true, maintainAspectRatio: false },
       });
     }
 
@@ -436,22 +411,12 @@ Dashboard.renderPerformance = async function (start, end) {
     }
 
     if (canEditComments) {
-      const bindRerender = (id, applyChange) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener("change", () => {
-          Dashboard.updateReportPresentation("performance", applyChange.bind(null, el));
-          Dashboard.route();
-        });
-      };
-
-      bindRerender("performance-category", (el, state) => { state.category = el.value; });
-      bindRerender("perf-percentiles-type", (el, state) => { state.chartTypes["perf-percentiles"] = el.value; });
-      bindRerender("perf-radar-type", (el, state) => { state.chartTypes["perf-radar"] = el.value; });
-      bindRerender("performance-inc-cards", (el, state) => { state.include.cards = el.checked; });
-      bindRerender("performance-inc-charts", (el, state) => { state.include.charts = el.checked; });
-      bindRerender("performance-inc-table", (el, state) => { state.include.table = el.checked; });
-      bindRerender("performance-inc-comments", (el, state) => { state.include.comments = el.checked; });
+      Dashboard.bindPresentationControl("performance", "perf-percentiles-type", (el, state) => { state.chartTypes["perf-percentiles"] = el.value; });
+      Dashboard.bindPresentationControl("performance", "perf-radar-type", (el, state) => { state.chartTypes["perf-radar"] = el.value; });
+      Dashboard.bindPresentationControl("performance", "performance-inc-cards", (el, state) => { state.include.cards = el.checked; });
+      Dashboard.bindPresentationControl("performance", "performance-inc-charts", (el, state) => { state.include.charts = el.checked; });
+      Dashboard.bindPresentationControl("performance", "performance-inc-table", (el, state) => { state.include.table = el.checked; });
+      Dashboard.bindPresentationControl("performance", "performance-inc-comments", (el, state) => { state.include.comments = el.checked; });
     }
 
     if (Dashboard.destroyCommentEditors) Dashboard.destroyCommentEditors();
@@ -484,15 +449,7 @@ Dashboard.renderErrors = async function (start, end) {
       ? `
         <section class="panel">
           <h3>Report Builder</h3>
-          <p>Category guide: Traffic = acquisition trends, Behavior = engagement patterns, Performance = technical quality signals.</p>
-          <div class="admin-form">
-            <label>Category
-              <select id="errors-category">
-                <option value="traffic" ${presentation.category === "traffic" ? "selected" : ""}>Traffic</option>
-                <option value="behavior" ${presentation.category === "behavior" ? "selected" : ""}>Behavior</option>
-                <option value="performance" ${presentation.category === "performance" ? "selected" : ""}>Performance</option>
-              </select>
-            </label>
+          <div class="report-builder-form">
             <label>Trend Chart
               <select id="errors-trend-type">
                 <option value="line" ${presentation.chartTypes["errors-trend"] === "line" ? "selected" : ""}>Line</option>
@@ -506,7 +463,7 @@ Dashboard.renderErrors = async function (start, end) {
               </select>
             </label>
           </div>
-          <div class="user-controls" style="margin-top:8px;">
+          <div class="report-builder-toggles">
             <label><input type="checkbox" id="errors-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
             <label><input type="checkbox" id="errors-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
             <label><input type="checkbox" id="errors-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
@@ -560,12 +517,12 @@ Dashboard.renderErrors = async function (start, end) {
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Errors per Day</h3>
-        <div id="errorTrendChart" style="height:300px;width:100%;"></div>
+        <div id="errorTrendChart" style="height:220px;width:100%;"></div>
       </section>
 
       <section class="panel ${presentation.include.charts ? "" : "hidden"}">
         <h3>Top Error Messages</h3>
-        <canvas id="errorTopChart"></canvas>
+        <canvas id="errorTopChart" class="chart-canvas"></canvas>
       </section>
 
       <section class="panel ${presentation.include.table ? "" : "hidden"}">
@@ -595,7 +552,7 @@ Dashboard.renderErrors = async function (start, end) {
           scaleY: { label: { text: "Errors" } },
           series: [{ values: trend.map((d) => d.errors), lineColor: "#2E86C1", marker: { backgroundColor: "#2E86C1" } }],
         },
-        height: 300,
+        height: 220,
         width: "100%",
       });
 
@@ -609,7 +566,7 @@ Dashboard.renderErrors = async function (start, end) {
             backgroundColor: ["#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6"],
           }],
         },
-        options: { plugins: { legend: { position: "bottom" } } },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
       });
     }
 
@@ -631,22 +588,12 @@ Dashboard.renderErrors = async function (start, end) {
     }
 
     if (canEditComments) {
-      const bindRerender = (id, applyChange) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener("change", () => {
-          Dashboard.updateReportPresentation("errors", applyChange.bind(null, el));
-          Dashboard.route();
-        });
-      };
-
-      bindRerender("errors-category", (el, state) => { state.category = el.value; });
-      bindRerender("errors-trend-type", (el, state) => { state.chartTypes["errors-trend"] = el.value; });
-      bindRerender("errors-top-type", (el, state) => { state.chartTypes["errors-top"] = el.value; });
-      bindRerender("errors-inc-cards", (el, state) => { state.include.cards = el.checked; });
-      bindRerender("errors-inc-charts", (el, state) => { state.include.charts = el.checked; });
-      bindRerender("errors-inc-table", (el, state) => { state.include.table = el.checked; });
-      bindRerender("errors-inc-comments", (el, state) => { state.include.comments = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-trend-type", (el, state) => { state.chartTypes["errors-trend"] = el.value; });
+      Dashboard.bindPresentationControl("errors", "errors-top-type", (el, state) => { state.chartTypes["errors-top"] = el.value; });
+      Dashboard.bindPresentationControl("errors", "errors-inc-cards", (el, state) => { state.include.cards = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-inc-charts", (el, state) => { state.include.charts = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-inc-table", (el, state) => { state.include.table = el.checked; });
+      Dashboard.bindPresentationControl("errors", "errors-inc-comments", (el, state) => { state.include.comments = el.checked; });
     }
 
     if (Dashboard.destroyCommentEditors) Dashboard.destroyCommentEditors();

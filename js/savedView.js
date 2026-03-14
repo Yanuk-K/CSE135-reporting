@@ -91,6 +91,7 @@ Dashboard.renderSavedChart = function (container, chartData, index, presentation
   const title = document.createElement("h3");
   title.textContent = chartData.title || chartData.id || `Chart ${index + 1}`;
   const canvas = document.createElement("canvas");
+  canvas.className = "chart-canvas";
   panel.appendChild(title);
   panel.appendChild(canvas);
   container.appendChild(panel);
@@ -114,6 +115,7 @@ Dashboard.renderSavedChart = function (container, chartData, index, presentation
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { position: "bottom" },
       },

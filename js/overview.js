@@ -39,86 +39,6 @@ Dashboard.renderCards = function (data) {
   });
 };
 
-Dashboard.renderLineChart = function (canvas, dataPoints, labelKey, valueKey) {
-  if (!canvas || !dataPoints || dataPoints.length === 0) return;
-
-  const ctx = canvas.getContext("2d");
-  const W = (canvas.width = canvas.offsetWidth);
-  const H = (canvas.height = 250);
-  const pad = { top: 20, right: 20, bottom: 40, left: 60 };
-  const plotW = W - pad.left - pad.right;
-  const plotH = H - pad.top - pad.bottom;
-
-  ctx.clearRect(0, 0, W, H);
-
-  const values = dataPoints.map((d) => Number(d[valueKey] || 0));
-  const maxVal = Math.max(...values, 1);
-
-  ctx.strokeStyle = "#ddd";
-  ctx.beginPath();
-  ctx.moveTo(pad.left, pad.top);
-  ctx.lineTo(pad.left, H - pad.bottom);
-  ctx.lineTo(W - pad.right, H - pad.bottom);
-  ctx.stroke();
-
-  ctx.strokeStyle = "#2E86C1";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  dataPoints.forEach((d, i) => {
-    const x = pad.left + (i / (dataPoints.length - 1 || 1)) * plotW;
-    const y = H - pad.bottom - (values[i] / maxVal) * plotH;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  ctx.fillStyle = "#2E86C1";
-  dataPoints.forEach((d, i) => {
-    const x = pad.left + (i / (dataPoints.length - 1 || 1)) * plotW;
-    const y = H - pad.bottom - (values[i] / maxVal) * plotH;
-    ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  ctx.fillStyle = "#666";
-  ctx.font = "11px sans-serif";
-  ctx.textAlign = "center";
-  [0, Math.floor(dataPoints.length / 2), dataPoints.length - 1].forEach((i) => {
-    if (!dataPoints[i]) return;
-    const x = pad.left + (i / (dataPoints.length - 1 || 1)) * plotW;
-    ctx.fillText(String(dataPoints[i][labelKey]).slice(0, 10), x, H - pad.bottom + 20);
-  });
-
-  ctx.textAlign = "right";
-  ctx.fillText(maxVal.toLocaleString(), pad.left - 8, pad.top + 10);
-  ctx.fillText("0", pad.left - 8, H - pad.bottom);
-};
-
-Dashboard.renderTable = function (container, pages) {
-  if (!container) return;
-  container.innerHTML = "";
-
-  const table = document.createElement("table");
-  const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>URL</th><th>Views</th></tr>";
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-  (pages || []).forEach((p) => {
-    const tr = document.createElement("tr");
-    const tdUrl = document.createElement("td");
-    tdUrl.textContent = p.url || "";
-    const tdViews = document.createElement("td");
-    tdViews.textContent = Number(p.views || 0).toLocaleString();
-    tr.appendChild(tdUrl);
-    tr.appendChild(tdViews);
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  container.appendChild(table);
-};
-
 Dashboard.renderOverview = async function () {
   const content = document.getElementById("content");
   const presentation = Dashboard.getReportPresentation("overview");
@@ -127,15 +47,7 @@ Dashboard.renderOverview = async function () {
     ? `
       <section class="panel">
         <h3>Report Builder</h3>
-        <p>Category guide: Traffic = acquisition trends, Behavior = engagement patterns, Performance = technical quality signals.</p>
-        <div class="admin-form">
-          <label>Category
-            <select id="overview-category">
-              <option value="traffic" ${presentation.category === "traffic" ? "selected" : ""}>Traffic</option>
-              <option value="behavior" ${presentation.category === "behavior" ? "selected" : ""}>Behavior</option>
-              <option value="performance" ${presentation.category === "performance" ? "selected" : ""}>Performance</option>
-            </select>
-          </label>
+        <div class="report-builder-form">
           <label>Trend Chart
             <select id="overview-trend-type">
               <option value="line" ${presentation.chartTypes["overview-trend"] === "line" ? "selected" : ""}>Line</option>
@@ -149,7 +61,7 @@ Dashboard.renderOverview = async function () {
             </select>
           </label>
         </div>
-        <div class="user-controls" style="margin-top:8px;">
+        <div class="report-builder-toggles">
           <label><input type="checkbox" id="overview-inc-cards" ${presentation.include.cards ? "checked" : ""}/> Cards</label>
           <label><input type="checkbox" id="overview-inc-charts" ${presentation.include.charts ? "checked" : ""}/> Charts</label>
           <label><input type="checkbox" id="overview-inc-table" ${presentation.include.table ? "checked" : ""}/> Table</label>
@@ -249,7 +161,7 @@ Dashboard.renderOverview = async function () {
               tension: 0.2,
             }],
           },
-          options: { plugins: { legend: { position: "bottom" } } },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
         });
       }
 
@@ -265,7 +177,7 @@ Dashboard.renderOverview = async function () {
               backgroundColor: ["#2E86C1", "#60a5fa", "#94a3b8", "#64748b", "#93c5fd", "#cbd5e1", "#1d4ed8", "#334155"],
             }],
           },
-          options: { plugins: { legend: { position: "bottom" } } },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
         });
       }
     }
@@ -306,34 +218,22 @@ Dashboard.renderOverview = async function () {
     }
 
     if (canEditComments) {
-      const bindRerender = (id, applyChange) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener("change", () => {
-          Dashboard.updateReportPresentation("overview", applyChange.bind(null, el));
-          Dashboard.route();
-        });
-      };
-
-      bindRerender("overview-category", (el, state) => {
-        state.category = el.value;
-      });
-      bindRerender("overview-trend-type", (el, state) => {
+      Dashboard.bindPresentationControl("overview", "overview-trend-type", (el, state) => {
         state.chartTypes["overview-trend"] = el.value;
       });
-      bindRerender("overview-top-type", (el, state) => {
+      Dashboard.bindPresentationControl("overview", "overview-top-type", (el, state) => {
         state.chartTypes["overview-top-pages"] = el.value;
       });
-      bindRerender("overview-inc-cards", (el, state) => {
+      Dashboard.bindPresentationControl("overview", "overview-inc-cards", (el, state) => {
         state.include.cards = el.checked;
       });
-      bindRerender("overview-inc-charts", (el, state) => {
+      Dashboard.bindPresentationControl("overview", "overview-inc-charts", (el, state) => {
         state.include.charts = el.checked;
       });
-      bindRerender("overview-inc-table", (el, state) => {
+      Dashboard.bindPresentationControl("overview", "overview-inc-table", (el, state) => {
         state.include.table = el.checked;
       });
-      bindRerender("overview-inc-comments", (el, state) => {
+      Dashboard.bindPresentationControl("overview", "overview-inc-comments", (el, state) => {
         state.include.comments = el.checked;
       });
     }

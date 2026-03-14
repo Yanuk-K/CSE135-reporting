@@ -6,12 +6,10 @@ Dashboard.reportBuilderState = Dashboard.reportBuilderState || {};
 
 Dashboard.defaultPresentationBySection = {
   overview: {
-    category: "traffic",
     include: { cards: true, charts: true, table: true, comments: true },
     chartTypes: { "overview-trend": "line", "overview-top-pages": "bar" },
   },
   sessions: {
-    category: "behavior",
     include: { cards: true, charts: true, table: true, comments: true },
     chartTypes: {
       "sessions-trend": "line",
@@ -20,12 +18,10 @@ Dashboard.defaultPresentationBySection = {
     },
   },
   performance: {
-    category: "performance",
     include: { cards: true, charts: true, table: true, comments: true },
     chartTypes: { "perf-percentiles": "bar", "perf-radar": "radar" },
   },
   errors: {
-    category: "performance",
     include: { cards: true, charts: true, table: true, comments: true },
     chartTypes: { "errors-trend": "line", "errors-top": "bar" },
   },
@@ -38,7 +34,6 @@ Dashboard.cloneObject = function (value) {
 Dashboard.getReportPresentation = function (section) {
   if (!section || !Dashboard.defaultPresentationBySection[section]) {
     return {
-      category: "performance",
       include: { cards: true, charts: true, table: true, comments: true },
       chartTypes: {},
     };
@@ -52,6 +47,15 @@ Dashboard.getReportPresentation = function (section) {
 Dashboard.updateReportPresentation = function (section, updater) {
   const current = Dashboard.getReportPresentation(section);
   updater(current);
+};
+
+Dashboard.bindPresentationControl = function (section, id, applyChange) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("change", () => {
+    Dashboard.updateReportPresentation(section, applyChange.bind(null, el));
+    Dashboard.route();
+  });
 };
 
 Dashboard.getRole = function () {
@@ -181,6 +185,12 @@ Dashboard.saveCurrentReport = async function () {
   try {
     const section = state.route.replace("/", "") || "overview";
     const presentation = Dashboard.getReportPresentation(section);
+    const categoryBySection = {
+      overview: "traffic",
+      sessions: "behavior",
+      performance: "performance",
+      errors: "performance",
+    };
     const title = `${section.toUpperCase()} ${state.start} to ${state.end}`;
     const screenshots = await Dashboard.collectExportScreenshots(state.route);
     if (!screenshots.length) {
@@ -204,7 +214,7 @@ Dashboard.saveCurrentReport = async function () {
       body: JSON.stringify({
         title,
         section_key: section,
-        category: presentation.category || "performance",
+        category: categoryBySection[section] || "performance",
         report_json: reportJson,
         screenshot_images: screenshots,
         is_published: true,
