@@ -61,3 +61,8 @@ Dashboard.setActiveNav = function (route) {
     a.classList.toggle("active", a.dataset.route === route);
   });
 };
+
+Dashboard.canEditComments = function () {
+  const role = sessionStorage.getItem("role");
+  return role === "owner" || role === "admin";
+};

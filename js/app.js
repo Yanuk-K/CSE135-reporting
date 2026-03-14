@@ -52,7 +52,7 @@ Dashboard.buildReportDocument = function (state) {
   const content = document.getElementById("content");
   const blocks = Array.from(content.querySelectorAll(".panel")).map((panel, index) => {
     const titleEl = panel.querySelector("h2, h3");
-    const comment = panel.querySelector(".analyst-comment p, .analyst-note p");
+    const comment = panel.querySelector(".analyst-comment-input, .analyst-comment p, .analyst-note p");
     const tableRows = panel.querySelectorAll("table tbody tr").length;
     const chartCount = panel.querySelectorAll("canvas, [id*='Chart'], [id*='chart']").length;
     const type = chartCount ? "chart" : tableRows ? "table" : "text";
@@ -60,7 +60,7 @@ Dashboard.buildReportDocument = function (state) {
       id: `block-${index + 1}`,
       type,
       title: titleEl ? titleEl.textContent.trim() : `Block ${index + 1}`,
-      comment: comment ? comment.textContent.trim() : "",
+      comment: comment ? (comment.tagName === "TEXTAREA" ? comment.value.trim() : comment.textContent.trim()) : "",
       html: panel.innerHTML,
     };
   });

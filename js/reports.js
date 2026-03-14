@@ -1,5 +1,22 @@
 window.Dashboard = window.Dashboard || {};
 
+Dashboard.renderCommentField = function (container, id, text) {
+  container.innerHTML = "";
+  if (Dashboard.canEditComments()) {
+    const input = document.createElement("textarea");
+    input.id = id;
+    input.className = "analyst-comment-input";
+    input.rows = 4;
+    input.value = text;
+    container.appendChild(input);
+    return;
+  }
+  const p = document.createElement("p");
+  p.id = id;
+  p.textContent = text;
+  container.appendChild(p);
+};
+
 Dashboard.renderSessions = async function (start, end) {
   const content = document.getElementById("content");
   Dashboard.showLoading(content);
@@ -39,7 +56,7 @@ Dashboard.renderSessions = async function (start, end) {
         <div id="session-table"></div>
         <div class="analyst-comment">
           <h3>Analyst Comment</h3>
-          <p id="session-comment"></p>
+          <div id="session-comment-body"></div>
         </div>
       </section>
     `;
@@ -81,10 +98,11 @@ Dashboard.renderSessions = async function (start, end) {
     table.appendChild(tbody);
     document.getElementById("session-table").appendChild(table);
 
-    document.getElementById("session-comment").textContent =
-      summary.bounce_rate != null && Number(summary.bounce_rate) > 50
-        ? "Many sessions end after one page, so navigation or landing-page clarity likely needs improvement."
-        : "Users appear to move beyond the first page often enough to suggest at least moderate engagement.";
+    Dashboard.renderCommentField(
+      document.getElementById("session-comment-body"),
+      "session-comment",
+      ""
+    );
   } catch (error) {
     Dashboard.showError(content, error.message);
   }
@@ -109,7 +127,7 @@ Dashboard.renderPerformance = async function (start, end) {
         <div id="perf-table"></div>
         <div class="analyst-comment">
           <h3>Analyst Comment</h3>
-          <p id="perf-comment"></p>
+          <div id="perf-comment-body"></div>
         </div>
       </section>
     `;
@@ -151,12 +169,11 @@ Dashboard.renderPerformance = async function (start, end) {
     table.appendChild(tbody);
     document.getElementById("perf-table").appendChild(table);
 
-    const worst = Object.entries(perf).reduce((best, [metric, value]) => {
-      const current = Number(value?.p75 || 0);
-      return !best || current > best.value ? { metric, value: current } : best;
-    }, null);
-    document.getElementById("perf-comment").textContent =
-      worst ? `${worst.metric.toUpperCase()} has the highest p75 value, so it is the clearest candidate for optimization.` : "No performance data is available.";
+    Dashboard.renderCommentField(
+      document.getElementById("perf-comment-body"),
+      "perf-comment",
+      ""
+    );
   } catch (error) {
     Dashboard.showError(content, error.message);
   }
@@ -196,7 +213,7 @@ Dashboard.renderErrors = async function (start, end) {
         </table>
         <div class="analyst-comment">
           <h3>Analyst Comment</h3>
-          <p id="error-comment"></p>
+          <div id="error-comment-body"></div>
         </div>
       </section>
     `;
@@ -228,9 +245,11 @@ Dashboard.renderErrors = async function (start, end) {
       tbody.appendChild(tr);
     }
 
-    const topError = byMessage[0];
-    document.getElementById("error-comment").textContent =
-      topError ? `"${topError.error_message}" is the most frequent error, so fixing it first should reduce the largest share of failures.` : "No errors were recorded for this date range.";
+    Dashboard.renderCommentField(
+      document.getElementById("error-comment-body"),
+      "error-comment",
+      ""
+    );
   } catch (error) {
     Dashboard.showError(content, error.message);
   }
