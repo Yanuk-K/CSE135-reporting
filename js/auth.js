@@ -65,6 +65,7 @@ Dashboard.renderLogin = function () {
       const displayName = (data.data && data.data.display_name) || email;
       sessionStorage.setItem("display_name", displayName);
       sessionStorage.setItem("role", (data.data && data.data.role) || "viewer");
+      sessionStorage.setItem("user_id", String((data.data && data.data.id) || ""));
       Dashboard.setHash("/overview", Dashboard.defaultStart(), Dashboard.defaultEnd());
     } catch (error) {
       err.classList.remove("hidden");
@@ -80,5 +81,6 @@ Dashboard.logout = async function () {
   }
   sessionStorage.removeItem("display_name");
   sessionStorage.removeItem("role");
+  sessionStorage.removeItem("user_id");
   Dashboard.setHash("/login");
 };

@@ -5,8 +5,13 @@ const { proj } = require("../db");
 function createAdminRouter({ requireAuth, requireRole }) {
   const router = express.Router();
   const allowedSections = new Set(["overview", "sessions", "performance", "errors"]);
+  const requireAdminPanelAccess = (req, res, next) => {
+    if (req.session?.role === "owner") return next();
+    if (req.session?.role === "admin" && Number(req.session?.userId) === 1) return next();
+    return res.status(403).json({ success: false, error: "Insufficient permissions" });
+  };
 
-  router.get("/api/users", requireAuth, requireRole("admin"), async (req, res) => {
+  router.get("/api/users", requireAuth, requireAdminPanelAccess, async (req, res) => {
     try {
       const [rows] = await proj.query(
         `SELECT
@@ -31,7 +36,7 @@ function createAdminRouter({ requireAuth, requireRole }) {
     }
   });
 
-  router.post("/api/users", requireAuth, requireRole("admin"), async (req, res) => {
+  router.post("/api/users", requireAuth, requireAdminPanelAccess, async (req, res) => {
     try {
       const { email, password, display_name, role } = req.body || {};
       if (!email || !password) {
@@ -60,7 +65,7 @@ function createAdminRouter({ requireAuth, requireRole }) {
     }
   });
 
-  router.put("/api/users/:id", requireAuth, requireRole("admin"), async (req, res) => {
+  router.put("/api/users/:id", requireAuth, requireAdminPanelAccess, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ success: false, error: "invalid user id" });
@@ -100,7 +105,7 @@ function createAdminRouter({ requireAuth, requireRole }) {
     }
   });
 
-  router.delete("/api/users/:id", requireAuth, requireRole("admin"), async (req, res) => {
+  router.delete("/api/users/:id", requireAuth, requireAdminPanelAccess, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ success: false, error: "invalid user id" });
@@ -123,7 +128,7 @@ function createAdminRouter({ requireAuth, requireRole }) {
     }
   });
 
-  router.put("/api/users/:id/sections", requireAuth, requireRole("owner"), async (req, res) => {
+  router.put("/api/users/:id/sections", requireAuth, requireAdminPanelAccess, async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ success: false, error: "invalid user id" });

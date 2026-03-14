@@ -13,7 +13,12 @@ Dashboard.getAuthState = async function (state) {
 
 Dashboard.setAuthUI = function (isAuthenticated) {
   const loginLink = document.querySelector('#main-nav a[data-route="/login"]');
+  const adminLink = document.querySelector('#main-nav a[data-route="/admin"]');
+  const isOwner = sessionStorage.getItem("role") === "owner";
+  const isAnalystOne =
+    sessionStorage.getItem("role") === "admin" && Number(sessionStorage.getItem("user_id")) === 1;
   if (loginLink) loginLink.classList.toggle("hidden", isAuthenticated);
+  if (adminLink) adminLink.classList.toggle("hidden", !isAuthenticated || (!isOwner && !isAnalystOne));
 };
 
 Dashboard.setHeaderState = function (state, isAuthenticated) {
@@ -202,6 +207,13 @@ Dashboard.route = async function () {
     return;
   }
   if (state.route === "/admin") {
+    const isOwner = sessionStorage.getItem("role") === "owner";
+    const isAnalystOne =
+      sessionStorage.getItem("role") === "admin" && Number(sessionStorage.getItem("user_id")) === 1;
+    if (!isOwner && !isAnalystOne) {
+      Dashboard.setHash("/overview", state.start, state.end);
+      return;
+    }
     await Dashboard.renderAdmin();
     return;
   }
