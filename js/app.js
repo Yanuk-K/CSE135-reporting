@@ -31,7 +31,7 @@ Dashboard.setHeaderState = function (state, isAuthenticated) {
 };
 
 Dashboard.canExport = function (route) {
-  return route === "/overview" || route === "/performance" || route === "/errors";
+  return route === "/overview" || route === "/sessions" || route === "/performance" || route === "/errors";
 };
 
 Dashboard.captureElementImage = async function (element, label) {
@@ -116,6 +116,10 @@ Dashboard.route = async function () {
   }
   if (state.route === "/performance") {
     await Dashboard.renderPerformance(state.start, state.end);
+    return;
+  }
+  if (state.route === "/sessions") {
+    await Dashboard.renderSessions(state.start, state.end);
     return;
   }
   if (state.route === "/errors") {

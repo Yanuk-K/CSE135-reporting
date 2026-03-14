@@ -128,8 +128,17 @@ body {
 
 .metric-label { color: var(--site-muted); font-size: 0.9rem; }
 .metric-value { margin-top: 6px; font-size: 1.1rem; font-weight: 700; }
-
 .chart-canvas { width: 100%; display: block; }
+.analyst-comment {
+  margin-top: 12px;
+  color: var(--site-muted);
+  line-height: 1.5;
+}
+
+.analyst-comment h3 {
+  margin: 0 0 8px;
+  color: var(--site-text);
+}
 
 .table-wrapper { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }

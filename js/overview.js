@@ -125,6 +125,10 @@ Dashboard.renderOverview = async function () {
     <div id="cards" class="cards-grid"></div>
     <canvas id="chart" class="chart-canvas" style="margin: 20px 0;"></canvas>
     <div id="top-pages"></div>
+    <section class="panel analyst-comment">
+      <h3>Analyst Comment</h3>
+      <p id="overview-comment">Loading analysis...</p>
+    </section>
   `;
 
   try {
@@ -140,10 +144,17 @@ Dashboard.renderOverview = async function () {
     const pv = pageviewsRes.data || {};
     const byDay = pv.timeseries || [];
     const topPages = pv.top_pages || [];
+    const totalViews = Number(dashboardData.total_pageviews || 0);
+    const topThreeViews = topPages.slice(0, 3).reduce((sum, page) => sum + Number(page.views || 0), 0);
 
     Dashboard.renderCards(dashboardData);
     Dashboard.renderLineChart(document.getElementById("chart"), byDay, "date", "views");
     Dashboard.renderTable(document.getElementById("top-pages"), topPages);
+
+    document.getElementById("overview-comment").textContent =
+      totalViews > 0
+        ? `Traffic is ${topThreeViews / totalViews >= 0.5 ? "concentrated on a few top pages" : "fairly distributed across pages"}. The chart and table show whether visits are steady or spike around specific dates.`
+        : "No pageview data is available for this date range.";
   } catch (error) {
     Dashboard.showError(content, error.message);
   }

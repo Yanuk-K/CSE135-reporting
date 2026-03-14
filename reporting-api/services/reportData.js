@@ -168,12 +168,58 @@ async function getSessionsReport(start, end) {
     [start, end]
   );
 
+  const [timeseries] = await proj.query(
+    `SELECT DATE(start_time) AS date, COUNT(*) AS sessions
+     FROM sessions
+     WHERE start_time >= ? AND start_time < DATE_ADD(?, INTERVAL 1 DAY)
+     GROUP BY DATE(start_time)
+     ORDER BY DATE(start_time) ASC`,
+    [start, end]
+  );
+
+  const [depthBuckets] = await proj.query(
+    `SELECT
+       CASE
+         WHEN page_count <= 1 THEN '1 page'
+         WHEN page_count = 2 THEN '2 pages'
+         WHEN page_count BETWEEN 3 AND 4 THEN '3-4 pages'
+         ELSE '5+ pages'
+       END AS bucket,
+       COUNT(*) AS sessions
+     FROM sessions
+     WHERE start_time >= ? AND start_time < DATE_ADD(?, INTERVAL 1 DAY)
+     GROUP BY bucket
+     ORDER BY FIELD(bucket, '1 page', '2 pages', '3-4 pages', '5+ pages')`,
+    [start, end]
+  );
+
+  const [durationBuckets] = await proj.query(
+    `SELECT
+       CASE
+         WHEN duration_seconds < 30 THEN '<30s'
+         WHEN duration_seconds < 120 THEN '30s-2m'
+         WHEN duration_seconds < 300 THEN '2m-5m'
+         ELSE '5m+'
+       END AS bucket,
+       COUNT(*) AS sessions
+     FROM sessions
+     WHERE start_time >= ? AND start_time < DATE_ADD(?, INTERVAL 1 DAY)
+     GROUP BY bucket
+     ORDER BY FIELD(bucket, '<30s', '30s-2m', '2m-5m', '5m+')`,
+    [start, end]
+  );
+
   return {
-    total_sessions: Number(row.total_sessions || 0),
-    avg_duration_seconds: row.avg_duration_seconds == null ? null : Number(row.avg_duration_seconds),
-    avg_pages_per_session:
-      row.avg_pages_per_session == null ? null : Number(row.avg_pages_per_session),
-    bounce_rate: row.bounce_rate == null ? null : Number(row.bounce_rate),
+    summary: {
+      total_sessions: Number(row.total_sessions || 0),
+      avg_duration_seconds: row.avg_duration_seconds == null ? null : Number(row.avg_duration_seconds),
+      avg_pages_per_session:
+        row.avg_pages_per_session == null ? null : Number(row.avg_pages_per_session),
+      bounce_rate: row.bounce_rate == null ? null : Number(row.bounce_rate),
+    },
+    timeseries,
+    depth_buckets: depthBuckets,
+    duration_buckets: durationBuckets,
   };
 }
 

@@ -108,7 +108,7 @@ function createAnalyticsRouter({ requireAuth }) {
 
   router.post("/api/exports/report", requireAuth, async (req, res) => {
     const route = req.body?.route;
-    if (!["/overview", "/performance", "/errors"].includes(route)) {
+    if (!["/overview", "/sessions", "/performance", "/errors"].includes(route)) {
       return res.status(400).json({ success: false, error: "Unsupported report route" });
     }
 
