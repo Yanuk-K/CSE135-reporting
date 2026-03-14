@@ -30,6 +30,47 @@ Dashboard.renderSessions = async function (start, end) {
     const trend = report.timeseries || [];
     const depth = report.depth_buckets || [];
 
+    Dashboard.currentSectionData.sessions = {
+      section: "sessions",
+      range: { start, end },
+      cards: [
+        { label: "Total Sessions", value: Number(summary.total_sessions || 0).toLocaleString() },
+        {
+          label: "Avg Duration",
+          value: summary.avg_duration_seconds == null ? "n/a" : `${Math.round(summary.avg_duration_seconds)} sec`,
+        },
+        {
+          label: "Pages / Session",
+          value: summary.avg_pages_per_session == null ? "n/a" : Number(summary.avg_pages_per_session).toFixed(2),
+        },
+        {
+          label: "Bounce Rate",
+          value: summary.bounce_rate == null ? "n/a" : `${Number(summary.bounce_rate).toFixed(1)}%`,
+        },
+      ],
+      charts: [
+        {
+          id: "sessions-trend",
+          type: "line",
+          labels: trend.map((d) => new Date(d.date).toLocaleDateString()),
+          series: [{ label: "Sessions", values: trend.map((d) => Number(d.sessions || 0)) }],
+        },
+        {
+          id: "sessions-depth",
+          type: "bar",
+          labels: depth.map((d) => d.bucket),
+          series: [{ label: "Sessions", values: depth.map((d) => Number(d.sessions || 0)) }],
+        },
+      ],
+      tables: [
+        {
+          id: "session-buckets",
+          columns: ["Bucket", "Sessions"],
+          rows: depth.map((row) => [row.bucket, Number(row.sessions || 0).toLocaleString()]),
+        },
+      ],
+    };
+
     content.innerHTML = `
       <section class="panel">
         <h2>Session Report</h2>
@@ -134,6 +175,36 @@ Dashboard.renderPerformance = async function (start, end) {
 
     const perf = data.data || {};
 
+    Dashboard.currentSectionData.performance = {
+      section: "performance",
+      range: { start, end },
+      cards: [],
+      charts: [
+        {
+          id: "perf-percentiles",
+          type: "bar",
+          labels: ["LCP", "CLS", "INP", "LOAD_TIME"],
+          series: [
+            { label: "p50", values: [perf.lcp?.p50 || 0, perf.cls?.p50 || 0, perf.inp?.p50 || 0, perf.load_time?.p50 || 0] },
+            { label: "p75", values: [perf.lcp?.p75 || 0, perf.cls?.p75 || 0, perf.inp?.p75 || 0, perf.load_time?.p75 || 0] },
+            { label: "p95", values: [perf.lcp?.p95 || 0, perf.cls?.p95 || 0, perf.inp?.p95 || 0, perf.load_time?.p95 || 0] },
+          ],
+        },
+      ],
+      tables: [
+        {
+          id: "perf-metrics",
+          columns: ["Metric", "p50", "p75", "p95"],
+          rows: Object.entries(perf).map(([metric, value]) => [
+            metric.replace("_", " ").toUpperCase(),
+            metric === "cls" ? (value.p50 ?? "n/a") : (value.p50 != null ? `${Number(value.p50).toFixed(2)} ms` : "n/a"),
+            metric === "cls" ? (value.p75 ?? "n/a") : (value.p75 != null ? `${Number(value.p75).toFixed(2)} ms` : "n/a"),
+            metric === "cls" ? (value.p95 ?? "n/a") : (value.p95 != null ? `${Number(value.p95).toFixed(2)} ms` : "n/a"),
+          ]),
+        },
+      ],
+    };
+
     new Chart(document.getElementById("perf-chart"), {
       type: "bar",
       data: {
@@ -190,6 +261,33 @@ Dashboard.renderErrors = async function (start, end) {
     const trend = data.data.timeseries || [];
     const byMessage = data.data.top_errors || [];
 
+    const totalErrors = trend.reduce((sum, d) => sum + d.errors, 0);
+    const lastSeenDate =
+      trend.length > 0
+        ? new Date(Math.max(...trend.map((d) => new Date(d.date)))).toLocaleDateString()
+        : "-";
+
+    Dashboard.currentSectionData.errors = {
+      section: "errors",
+      range: { start, end },
+      cards: [{ label: "Total Errors", value: String(totalErrors) }],
+      charts: [
+        {
+          id: "errors-trend",
+          type: "line",
+          labels: trend.map((d) => new Date(d.date).toLocaleDateString()),
+          series: [{ label: "Errors", values: trend.map((d) => Number(d.errors || 0)) }],
+        },
+      ],
+      tables: [
+        {
+          id: "top-errors",
+          columns: ["Error Message", "Count", "Last Seen"],
+          rows: byMessage.map((row) => [row.error_message, String(row.hits), lastSeenDate]),
+        },
+      ],
+    };
+
     content.innerHTML = `
       <section class="panel">
         <h2>Error Report</h2>
@@ -218,7 +316,6 @@ Dashboard.renderErrors = async function (start, end) {
       </section>
     `;
 
-    const totalErrors = trend.reduce((sum, d) => sum + d.errors, 0);
     document.getElementById("totalErrors").textContent = totalErrors;
 
     zingchart.render({
@@ -234,11 +331,6 @@ Dashboard.renderErrors = async function (start, end) {
     });
 
     const tbody = document.getElementById("errorBody");
-    const lastSeenDate =
-      trend.length > 0
-        ? new Date(Math.max(...trend.map((d) => new Date(d.date)))).toLocaleDateString()
-        : "-";
-
     for (const row of byMessage) {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${row.error_message}</td><td>${row.hits}</td><td>${lastSeenDate}</td>`;

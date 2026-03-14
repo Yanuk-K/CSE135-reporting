@@ -147,6 +147,38 @@ Dashboard.renderOverview = async function () {
     const topPages = pv.top_pages || [];
     const commentText = "";
 
+    Dashboard.currentSectionData.overview = {
+      section: "overview",
+      range: { start: range.start, end: range.end },
+      cards: [
+        { label: "Total Pageviews", value: Number(dashboardData.total_pageviews || 0).toLocaleString() },
+        { label: "Total Sessions", value: Number(dashboardData.total_sessions || 0).toLocaleString() },
+        {
+          label: "Avg Load Time",
+          value:
+            dashboardData.average_load_time == null
+              ? "0 ms"
+              : `${Number(dashboardData.average_load_time).toFixed(2)} ms`,
+        },
+        { label: "Total Errors", value: Number(dashboardData.total_errors || 0).toLocaleString() },
+      ],
+      charts: [
+        {
+          id: "overview-trend",
+          type: "line",
+          labels: byDay.map((d) => String(d.date || "")),
+          series: [{ label: "Views", values: byDay.map((d) => Number(d.views || 0)) }],
+        },
+      ],
+      tables: [
+        {
+          id: "top-pages",
+          columns: ["URL", "Views"],
+          rows: topPages.map((row) => [row.url || "", Number(row.views || 0).toLocaleString()]),
+        },
+      ],
+    };
+
     Dashboard.renderCards(dashboardData);
     Dashboard.renderLineChart(document.getElementById("chart"), byDay, "date", "views");
     Dashboard.renderTable(document.getElementById("top-pages"), topPages);

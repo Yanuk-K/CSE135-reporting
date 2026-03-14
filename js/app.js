@@ -1,6 +1,7 @@
 window.Dashboard = window.Dashboard || {};
 
 Dashboard.viewModeBySection = Dashboard.viewModeBySection || {};
+Dashboard.currentSectionData = Dashboard.currentSectionData || {};
 
 Dashboard.getRole = function () {
   return sessionStorage.getItem("role") || "viewer";
@@ -85,6 +86,8 @@ Dashboard.canExport = function (route) {
 Dashboard.canSaveReport = function (route) {
   const role = sessionStorage.getItem("role");
   if (role !== "owner" && role !== "admin") return false;
+  const section = Dashboard.routeToSection(route);
+  if (section && Dashboard.getSectionMode(section) === "saved") return false;
   return Dashboard.canExport(route);
 };
 
@@ -113,94 +116,6 @@ Dashboard.buildReportDocument = function (state) {
   };
 };
 
-Dashboard.renderSavedPublishedSection = async function (section) {
-  const content = document.getElementById("content");
-  Dashboard.showLoading(content);
-  const role = Dashboard.getRole();
-
-  try {
-    const latest = await Dashboard.apiFetch(`/api/reports/latest/${section}`);
-    const report = latest && latest.data;
-
-    if (!report) {
-      content.innerHTML = `
-        <section class="panel">
-          <h2>${section.toUpperCase()} Published Report</h2>
-          <p>No published report is available for this section yet.</p>
-        </section>
-      `;
-      return true;
-    }
-
-    content.innerHTML = `
-      <section class="panel">
-        <h2>${report.title || `${section.toUpperCase()} Published Report`}</h2>
-        <p>Published at ${report.updated_at || report.created_at || "-"}</p>
-        <button id="download-saved-pdf-btn" type="button">Download PDF</button>
-      </section>
-      <div id="saved-report-blocks"></div>
-    `;
-
-    const blocksContainer = document.getElementById("saved-report-blocks");
-    const blocks = Array.isArray(report.report_json?.blocks) ? report.report_json.blocks : [];
-    if (!blocks.length) {
-      const panel = document.createElement("section");
-      panel.className = "panel";
-      panel.textContent = "No saved blocks found in this report.";
-      blocksContainer.appendChild(panel);
-    }
-
-    blocks.forEach((block, index) => {
-      const panel = document.createElement("section");
-      panel.className = "panel";
-
-      const title = document.createElement("h3");
-      title.textContent = block.title || `Block ${index + 1}`;
-      panel.appendChild(title);
-
-      if (block.html) {
-        const htmlBody = document.createElement("div");
-        htmlBody.innerHTML = block.html;
-        panel.appendChild(htmlBody);
-      }
-
-      if (block.comment) {
-        const commentWrap = document.createElement("div");
-        commentWrap.className = "analyst-comment";
-        const commentTitle = document.createElement("h3");
-        commentTitle.textContent = "Analyst Comment";
-        const commentBody = document.createElement("p");
-        commentBody.textContent = block.comment;
-        commentWrap.appendChild(commentTitle);
-        commentWrap.appendChild(commentBody);
-        panel.appendChild(commentWrap);
-      }
-
-      blocksContainer.appendChild(panel);
-    });
-
-    const downloadBtn = document.getElementById("download-saved-pdf-btn");
-    downloadBtn.addEventListener("click", async () => {
-      try {
-        const response = await Dashboard.apiFetch(`/api/reports/${report.id}/pdf`);
-        if (response?.data?.url) {
-          window.open(response.data.url, "_blank", "noopener");
-        }
-      } catch (error) {
-        Dashboard.showError(content, error.message);
-      }
-    });
-
-    return true;
-  } catch (error) {
-    if (role === "viewer") {
-      Dashboard.showError(content, error.message);
-      return true;
-    }
-    return false;
-  }
-};
-
 Dashboard.saveCurrentReport = async function () {
   const button = document.getElementById("save-report-btn");
   const state = Dashboard.parseHash(window.location.hash || "#/overview");
@@ -222,13 +137,25 @@ Dashboard.saveCurrentReport = async function () {
     if (!screenshots.length) {
       throw new Error("Unable to capture report screenshot");
     }
+    const snapshot = Dashboard.currentSectionData[section];
+    if (!snapshot) {
+      throw new Error("No live section snapshot available to save. Switch to live view and reload this section.");
+    }
+    const reportJson = Dashboard.buildReportDocument(state);
+    reportJson.snapshot = {
+      ...snapshot,
+      section,
+      range: { start: state.start, end: state.end },
+      saved_at: new Date().toISOString(),
+    };
+
     await Dashboard.apiFetch("/api/reports", {
       method: "POST",
       body: JSON.stringify({
         title,
         section_key: section,
         category: categoryBySection[section] || section,
-        report_json: Dashboard.buildReportDocument(state),
+        report_json: reportJson,
         screenshot_images: screenshots,
         is_published: true,
       }),
