@@ -163,10 +163,11 @@ Dashboard.renderSessions = async function (start, end) {
       <section class="panel ${showTable ? "" : "hidden"}">
         <h3>Session Buckets</h3>
         <div id="session-table"></div>
-        <div class="analyst-comment ${showComment ? "" : "hidden"}">
-          <h3>Analyst Comment</h3>
-          <div id="session-comment-body"></div>
-        </div>
+      </section>
+
+      <section class="panel analyst-comment ${showComment ? "" : "hidden"}">
+        <h3>Analyst Comment</h3>
+        <div id="session-comment-body"></div>
       </section>
     `;
 
@@ -305,10 +306,11 @@ Dashboard.renderPerformance = async function (start, end) {
       <section class="panel ${showTable ? "" : "hidden"}">
         <h3>Metrics</h3>
         <div id="perf-table"></div>
-        <div class="analyst-comment ${showComment ? "" : "hidden"}">
-          <h3>Analyst Comment</h3>
-          <div id="perf-comment-body"></div>
-        </div>
+      </section>
+
+      <section class="panel analyst-comment ${showComment ? "" : "hidden"}">
+        <h3>Analyst Comment</h3>
+        <div id="perf-comment-body"></div>
       </section>
     `;
 
@@ -548,10 +550,11 @@ Dashboard.renderErrors = async function (start, end) {
           </thead>
           <tbody id="errorBody"></tbody>
         </table>
-        <div class="analyst-comment ${showComment ? "" : "hidden"}">
-          <h3>Analyst Comment</h3>
-          <div id="error-comment-body"></div>
-        </div>
+      </section>
+
+      <section class="panel analyst-comment ${showComment ? "" : "hidden"}">
+        <h3>Analyst Comment</h3>
+        <div id="error-comment-body"></div>
       </section>
     `;
 
