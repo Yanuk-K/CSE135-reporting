@@ -3,6 +3,7 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 
 const exportsDir = path.join(__dirname, "..", "exports");
+const MIN_READABLE_SCALE = 0.75;
 
 async function cleanupOldExports() {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
@@ -37,27 +38,64 @@ function renderScreenshotToCurrentPage(doc, screenshot) {
 
   const image = doc.openImage(imageBuffer);
   const left = doc.page.margins.left;
+  const right = doc.page.margins.right;
+  const top = doc.page.margins.top;
+  const bottom = doc.page.margins.bottom;
   const maxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const topMargin = doc.page.margins.top;
-  const bottomMargin = doc.page.margins.bottom;
-  const fullPageHeight = doc.page.height - topMargin - bottomMargin;
 
-  let availableHeight = doc.page.height - doc.y - bottomMargin;
+  let availableHeight = doc.page.height - doc.y - bottom;
   if (availableHeight < 120) {
     doc.addPage();
-    availableHeight = doc.page.height - doc.y - bottomMargin;
+    availableHeight = doc.page.height - doc.y - bottom;
   }
 
   const widthScale = maxWidth / image.width;
   const heightScale = availableHeight / image.height;
-  const scale = Math.min(widthScale, heightScale, 1);
+  const fitScale = Math.min(widthScale, heightScale, 1);
 
-  const renderWidth = image.width * scale;
-  const renderHeight = image.height * scale;
+  if (fitScale >= MIN_READABLE_SCALE) {
+    const renderWidth = image.width * fitScale;
+    const renderHeight = image.height * fitScale;
+    const x = left + (maxWidth - renderWidth) / 2;
+
+    doc.image(imageBuffer, x, doc.y, { width: renderWidth, height: renderHeight });
+    doc.y += renderHeight + 10;
+    return true;
+  }
+
+  const renderScale = Math.min(widthScale, 1);
+  const renderWidth = image.width * renderScale;
+  const renderHeight = image.height * renderScale;
   const x = left + (maxWidth - renderWidth) / 2;
 
-  doc.image(imageBuffer, x, doc.y, { width: renderWidth, height: renderHeight });
-  doc.y += renderHeight + 10;
+  let offset = 0;
+  let lastBottom = doc.y;
+
+  while (offset < renderHeight) {
+    const currentY = offset === 0 ? doc.y : top;
+    let visibleHeight = doc.page.height - currentY - bottom;
+    if (visibleHeight < 60) {
+      doc.addPage();
+      continue;
+    }
+
+    const remaining = renderHeight - offset;
+    const drawHeight = Math.min(remaining, visibleHeight);
+
+    doc.save();
+    doc.rect(left, currentY, doc.page.width - left - right, drawHeight).clip();
+    doc.image(imageBuffer, x, currentY - offset, { width: renderWidth, height: renderHeight });
+    doc.restore();
+
+    lastBottom = currentY + drawHeight;
+    offset += drawHeight;
+
+    if (offset < renderHeight) {
+      doc.addPage();
+    }
+  }
+
+  doc.y = Math.min(lastBottom + 10, doc.page.height - bottom);
 
   return true;
 }

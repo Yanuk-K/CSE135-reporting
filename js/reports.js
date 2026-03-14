@@ -255,13 +255,7 @@ Dashboard.renderPerformance = async function (start, end) {
         <section class="panel report-builder-panel">
           <h3>Report Builder</h3>
           <div class="report-builder-form">
-            <label>Percentiles Chart
-              <select id="perf-percentiles-type">
-                <option value="bar" ${presentation.chartTypes["perf-percentiles"] === "bar" ? "selected" : ""}>Bar</option>
-                <option value="line" ${presentation.chartTypes["perf-percentiles"] === "line" ? "selected" : ""}>Line</option>
-              </select>
-            </label>
-            <label>Radar Chart
+            <label>Comparison Chart
               <select id="perf-radar-type">
                 <option value="radar" ${presentation.chartTypes["perf-radar"] === "radar" ? "selected" : ""}>Radar</option>
                 <option value="bar" ${presentation.chartTypes["perf-radar"] === "bar" ? "selected" : ""}>Bar</option>
@@ -310,7 +304,7 @@ Dashboard.renderPerformance = async function (start, end) {
         {
           id: "perf-percentiles",
           title: "Web Vitals Percentiles",
-          type: presentation.chartTypes["perf-percentiles"] || "bar",
+          type: "bar",
           labels: ["LCP", "CLS", "INP", "LOAD_TIME"],
           series: [
             { label: "p50", values: [perf.lcp?.p50 || 0, perf.cls?.p50 || 0, perf.inp?.p50 || 0, perf.load_time?.p50 || 0] },
@@ -345,7 +339,7 @@ Dashboard.renderPerformance = async function (start, end) {
 
     if (presentation.include.charts) {
       Dashboard.renderManagedChart(document.getElementById("perf-chart"), {
-        type: presentation.chartTypes["perf-percentiles"] || "bar",
+        type: "bar",
         data: {
           labels: ["LCP", "CLS", "INP", "LOAD_TIME"],
           datasets: [
@@ -407,7 +401,6 @@ Dashboard.renderPerformance = async function (start, end) {
     }
 
     if (canEditComments) {
-      Dashboard.bindPresentationControl("performance", "perf-percentiles-type", (el, state) => { state.chartTypes["perf-percentiles"] = el.value; });
       Dashboard.bindPresentationControl("performance", "perf-radar-type", (el, state) => { state.chartTypes["perf-radar"] = el.value; });
       Dashboard.bindPresentationControl("performance", "performance-inc-cards", (el, state) => { state.include.cards = el.checked; });
       Dashboard.bindPresentationControl("performance", "performance-inc-charts", (el, state) => { state.include.charts = el.checked; });
