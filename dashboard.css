@@ -189,19 +189,27 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
 }
 
 .export-capture .chart-wrap {
-  height: 300px;
+  height: 250px;
 }
 
 .export-capture .panel {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  padding: 10px;
 }
 
 .export-capture table {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .export-capture .metric-value {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
+}
+
+.export-capture h2,
+.export-capture h3,
+.export-capture h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
 }
 
 .status-msg { min-height: 1.2em; }
