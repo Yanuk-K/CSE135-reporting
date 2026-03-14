@@ -45,7 +45,7 @@ Dashboard.renderOverview = async function () {
   const canEditComments = Dashboard.canEditComments();
   const builderHtml = canEditComments
     ? `
-      <section class="panel">
+      <section class="panel report-builder-panel">
         <h3>Report Builder</h3>
         <div class="report-builder-form">
           <label>Trend Chart
@@ -155,8 +155,6 @@ Dashboard.renderOverview = async function () {
             datasets: [{
               label: "Views",
               data: byDay.map((d) => Number(d.views || 0)),
-              borderColor: "#2E86C1",
-              backgroundColor: "#93c5fd",
               fill: false,
               tension: 0.2,
             }],
@@ -174,7 +172,6 @@ Dashboard.renderOverview = async function () {
             datasets: [{
               label: "Views",
               data: topPages.slice(0, 8).map((row) => Number(row.views || 0)),
-              backgroundColor: ["#2E86C1", "#60a5fa", "#94a3b8", "#64748b", "#93c5fd", "#cbd5e1", "#1d4ed8", "#334155"],
             }],
           },
           options: { plugins: { legend: { position: "bottom" } } },

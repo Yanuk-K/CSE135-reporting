@@ -38,7 +38,7 @@ Dashboard.renderSessions = async function (start, end) {
 
     const builderHtml = canEditComments
       ? `
-        <section class="panel">
+        <section class="panel report-builder-panel">
           <h3>Report Builder</h3>
           <div class="report-builder-form">
             <label>Trend Chart
@@ -168,7 +168,7 @@ Dashboard.renderSessions = async function (start, end) {
         data: {
           type: presentation.chartTypes["sessions-trend"] || "line",
           scaleX: { labels: trend.map((d) => new Date(d.date).toLocaleDateString()) },
-          series: [{ values: trend.map((d) => Number(d.sessions || 0)), lineColor: "#2E86C1" }],
+          series: [{ values: trend.map((d) => Number(d.sessions || 0)), lineColor: Dashboard.getPaletteColor(0) }],
         },
         height: 220,
         width: "100%",
@@ -178,13 +178,11 @@ Dashboard.renderSessions = async function (start, end) {
         type: presentation.chartTypes["sessions-depth"] || "bar",
         data: {
           labels: depth.map((d) => d.bucket),
-          datasets: [{
-            label: "Sessions",
-            data: depth.map((d) => Number(d.sessions || 0)),
-            backgroundColor: "#93c5fd",
-            borderColor: "#60a5fa",
-            borderWidth: 1,
-          }],
+            datasets: [{
+              label: "Sessions",
+              data: depth.map((d) => Number(d.sessions || 0)),
+              borderWidth: 1,
+            }],
         },
         options: { plugins: { legend: { display: false } } },
       }, "sessionDepthChart");
@@ -193,11 +191,10 @@ Dashboard.renderSessions = async function (start, end) {
         type: presentation.chartTypes["sessions-bounce"] || "doughnut",
         data: {
           labels: ["Bounce", "Engaged"],
-          datasets: [{
-            label: "Sessions",
-            data: [bounceCount, engagedCount],
-            backgroundColor: ["#ef4444", "#22c55e"],
-          }],
+            datasets: [{
+              label: "Sessions",
+              data: [bounceCount, engagedCount],
+            }],
         },
         options: { plugins: { legend: { position: "bottom" } } },
       }, "sessionBounceChart");
@@ -255,7 +252,7 @@ Dashboard.renderPerformance = async function (start, end) {
 
     const builderHtml = canEditComments
       ? `
-        <section class="panel">
+        <section class="panel report-builder-panel">
           <h3>Report Builder</h3>
           <div class="report-builder-form">
             <label>Percentiles Chart
@@ -352,9 +349,9 @@ Dashboard.renderPerformance = async function (start, end) {
         data: {
           labels: ["LCP", "CLS", "INP", "LOAD_TIME"],
           datasets: [
-            { label: "p50", data: [perf.lcp?.p50 || 0, perf.cls?.p50 || 0, perf.inp?.p50 || 0, perf.load_time?.p50 || 0], backgroundColor: "#cbd5e1" },
-            { label: "p75", data: [perf.lcp?.p75 || 0, perf.cls?.p75 || 0, perf.inp?.p75 || 0, perf.load_time?.p75 || 0], backgroundColor: "#94a3b8" },
-            { label: "p95", data: [perf.lcp?.p95 || 0, perf.cls?.p95 || 0, perf.inp?.p95 || 0, perf.load_time?.p95 || 0], backgroundColor: "#64748b" },
+            { label: "p50", data: [perf.lcp?.p50 || 0, perf.cls?.p50 || 0, perf.inp?.p50 || 0, perf.load_time?.p50 || 0] },
+            { label: "p75", data: [perf.lcp?.p75 || 0, perf.cls?.p75 || 0, perf.inp?.p75 || 0, perf.load_time?.p75 || 0] },
+            { label: "p95", data: [perf.lcp?.p95 || 0, perf.cls?.p95 || 0, perf.inp?.p95 || 0, perf.load_time?.p95 || 0] },
           ],
         },
         options: { plugins: { legend: { position: "bottom" } } },
@@ -368,8 +365,8 @@ Dashboard.renderPerformance = async function (start, end) {
             {
               label: "p75",
               data: [perf.lcp?.p75 || 0, perf.cls?.p75 || 0, perf.inp?.p75 || 0, perf.load_time?.p75 || 0],
-              backgroundColor: "rgba(59,130,246,0.2)",
-              borderColor: "#2563eb",
+              backgroundColor: Dashboard.getPaletteColor(1),
+              borderColor: Dashboard.getPaletteColor(0),
               borderWidth: 2,
             },
           ],
@@ -446,7 +443,7 @@ Dashboard.renderErrors = async function (start, end) {
 
     const builderHtml = canEditComments
       ? `
-        <section class="panel">
+        <section class="panel report-builder-panel">
           <h3>Report Builder</h3>
           <div class="report-builder-form">
             <label>Trend Chart
@@ -549,7 +546,7 @@ Dashboard.renderErrors = async function (start, end) {
           type: presentation.chartTypes["errors-trend"] || "line",
           scaleX: { labels: trend.map((d) => new Date(d.date).toLocaleDateString()) },
           scaleY: { label: { text: "Errors" } },
-          series: [{ values: trend.map((d) => d.errors), lineColor: "#2E86C1", marker: { backgroundColor: "#2E86C1" } }],
+          series: [{ values: trend.map((d) => d.errors), lineColor: Dashboard.getPaletteColor(0), marker: { backgroundColor: Dashboard.getPaletteColor(0) } }],
         },
         height: 220,
         width: "100%",
@@ -562,7 +559,6 @@ Dashboard.renderErrors = async function (start, end) {
           datasets: [{
             label: "Hits",
             data: byMessage.slice(0, 8).map((row) => Number(row.hits || 0)),
-            backgroundColor: ["#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6"],
           }],
         },
         options: { plugins: { legend: { position: "bottom" } } },

@@ -99,7 +99,6 @@ Dashboard.renderSavedChart = function (container, chartData, index, presentation
   panel.appendChild(wrap);
   container.appendChild(panel);
 
-  const palette = ["#2E86C1", "#60a5fa", "#94a3b8", "#64748b"];
   const preferredType = presentation?.chartTypes?.[chartData.id] || chartData.type;
   const chartType = ["line", "bar", "doughnut", "radar"].includes(preferredType) ? preferredType : "line";
   Dashboard.renderManagedChart(canvas, {
@@ -109,8 +108,6 @@ Dashboard.renderSavedChart = function (container, chartData, index, presentation
       datasets: chartData.series.map((series, seriesIndex) => ({
         label: series?.label || `Series ${seriesIndex + 1}`,
         data: Array.isArray(series?.values) ? series.values : [],
-        borderColor: palette[seriesIndex % palette.length],
-        backgroundColor: palette[seriesIndex % palette.length],
         fill: chartType === "radar",
         borderWidth: 2,
         tension: chartType === "line" ? 0.2 : 0,

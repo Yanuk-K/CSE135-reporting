@@ -4,6 +4,21 @@ Dashboard.viewModeBySection = Dashboard.viewModeBySection || {};
 Dashboard.currentSectionData = Dashboard.currentSectionData || {};
 Dashboard.reportBuilderState = Dashboard.reportBuilderState || {};
 Dashboard.chartInstances = Dashboard.chartInstances || new Map();
+Dashboard.chartPalette = [
+  "#003f5c",
+  "#2f4b7c",
+  "#665191",
+  "#a05195",
+  "#d45087",
+  "#f95d6a",
+  "#ff7c43",
+  "#ffa600",
+];
+
+Dashboard.getPaletteColor = function (index) {
+  const palette = Dashboard.chartPalette;
+  return palette[((index % palette.length) + palette.length) % palette.length];
+};
 
 Dashboard.defaultPresentationBySection = {
   overview: {
@@ -83,6 +98,28 @@ Dashboard.renderManagedChart = function (canvas, config, key) {
       ...(config.options || {}),
     },
   };
+
+  const chartType = String(mergedConfig.type || "line").toLowerCase();
+  if (mergedConfig.data && Array.isArray(mergedConfig.data.datasets)) {
+    mergedConfig.data.datasets = mergedConfig.data.datasets.map((dataset, index) => {
+      const next = { ...dataset };
+      if (next.backgroundColor == null) {
+        if (["doughnut", "pie", "polararea"].includes(chartType)) {
+          const count = Array.isArray(next.data) ? next.data.length : Dashboard.chartPalette.length;
+          next.backgroundColor = Array.from({ length: count }, (_, i) => Dashboard.getPaletteColor(i));
+        } else {
+          next.backgroundColor = Dashboard.getPaletteColor(index);
+        }
+      }
+      if (next.borderColor == null) {
+        next.borderColor = Dashboard.getPaletteColor(index);
+      }
+      if (next.pointBackgroundColor == null) {
+        next.pointBackgroundColor = Dashboard.getPaletteColor(index);
+      }
+      return next;
+    });
+  }
 
   const chart = new Chart(canvas, mergedConfig);
   if (chartKey) Dashboard.chartInstances.set(chartKey, chart);
@@ -270,9 +307,17 @@ Dashboard.captureElementImage = async function (element, label) {
 
   const canvas = await window.html2canvas(element, {
     backgroundColor: "#ffffff",
-    scale: 1,
+    scale: 2,
     useCORS: true,
     logging: false,
+    onclone: (clonedDoc) => {
+      const clonedTarget = clonedDoc.getElementById(element.id);
+      if (!clonedTarget) return;
+      clonedTarget.classList.add("export-capture");
+      clonedTarget.querySelectorAll(".report-builder-panel").forEach((node) => {
+        node.remove();
+      });
+    },
   });
 
   return {

@@ -188,6 +188,10 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
   width: 100%;
 }
 
+.export-capture .chart-wrap {
+  height: 300px;
+}
+
 .status-msg { min-height: 1.2em; }
 
 .login-wrap {
